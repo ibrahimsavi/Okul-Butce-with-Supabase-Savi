@@ -1,170 +1,139 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
 
-// Data klasörünü oluştur
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Supabase bilgileri bulunamadı!');
+    process.exit(1);
 }
 
-// Veritabanı dosyası yolu
-const dbPath = path.join(dataDir, 'okul.db');
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// SQLite bağlantısını oluştur
-let db;
-try {
-  db = new Database(dbPath);
-  console.log('✅ SQLite (better-sqlite3) veritabanına bağlandı:', dbPath);
-} catch (err) {
-  console.error('❌ Veritabanı bağlantı hatası:', err.message);
-}
-
-// Ortak yardımcı: tabloya eksik sütun ekle (varsa atla)
-function ensureColumns(tableName, columns) {
-  const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
-  const existing = rows.map(r => r.name);
-  const toAdd = columns.filter(c => !existing.includes(c.name));
-  toAdd.forEach(col => {
+async function initializeDatabase() {
     try {
-      db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${col.name} ${col.def}`).run();
-    } catch (e) {
-      console.warn(`⚠️ ${tableName}.${col.name} eklenemedi: ${e.message}`);
+        console.log('🔄 Supabase bağlantısı test ediliyor...');
+        
+        const { data, error } = await supabase
+            .from('categories')
+            .select('count', { count: 'exact', head: true });
+        
+        if (error && error.code === '42P01') {
+            console.log('❌ Tablolar bulunamadı.');
+            console.log('📋 SQL komutlarını Supabase Dashboard\'da çalıştırın.\n');
+            printSQL();
+            return false;
+        } else if (error) {
+            console.error('❌ Hata:', error.message);
+            return false;
+        }
+        
+        console.log('✅ Supabase bağlantısı başarılı!');
+        return true;
+    } catch (error) {
+        console.error('❌ Bağlantı hatası:', error.message);
+        return false;
     }
-  });
 }
 
-// Veritabanı şemasını başlat / migrate et
-function initializeDatabase() {
-  return new Promise((resolve, reject) => {
-    // Yeni hedef şema (UI + router beklentileriyle uyumlu)
-    const createCategoriesTable = `
-      CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        type TEXT NOT NULL CHECK (type IN ('gelir','gider')),
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`;
+function printSQL() {
+    console.log(`
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    type VARCHAR(10) NOT NULL CHECK (type IN ('gelir', 'gider')),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    const createTransactionsTable = `
-      CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL CHECK (type IN ('gelir','gider')),
-        amount REAL NOT NULL CHECK (amount > 0),
-        description TEXT NOT NULL,
-        category_id INTEGER NOT NULL,
-        transaction_date TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
-      )`;
+CREATE TABLE students (
+    id SERIAL PRIMARY KEY,
+    student_number VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    class VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'aktif',
+    phone VARCHAR(20),
+    email VARCHAR(255),
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    const createStudentsTable = `
-      CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        student_number TEXT UNIQUE,
-        class_name TEXT NOT NULL,
-        section TEXT,
-        parent_name TEXT,
-        parent_phone TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )`;
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(10) NOT NULL CHECK (type IN ('gelir', 'gider')),
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT NOT NULL,
+    category_id INTEGER REFERENCES categories(id),
+    student_id INTEGER REFERENCES students(id),
+    transaction_date DATE NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    const createStudentFeesTable = `
-      CREATE TABLE IF NOT EXISTS student_fees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        student_id INTEGER NOT NULL,
-        description TEXT NOT NULL,
-        amount REAL NOT NULL CHECK (amount > 0),
-        due_date TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','overdue')),
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
-      )`;
+CREATE TABLE fees (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id),
+    amount DECIMAL(10,2) NOT NULL,
+    due_date DATE NOT NULL,
+    payment_date DATE,
+    status VARCHAR(20) DEFAULT 'beklemede',
+    description TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-    const createPaymentsTable = `
-      CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        fee_id INTEGER NOT NULL,
-        amount REAL NOT NULL CHECK (amount > 0),
-        payment_date TEXT NOT NULL,
-        payment_method TEXT NOT NULL CHECK (payment_method IN ('cash','bank_transfer','credit_card','check')),
-        receipt_number TEXT,
-        notes TEXT,
-        transaction_id INTEGER,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (fee_id) REFERENCES student_fees (id) ON DELETE CASCADE,
-        FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE SET NULL
-      )`;
+INSERT INTO categories (name, type, description) VALUES 
+('Öğrenci Aidatı', 'gelir', 'Öğrencilerden alınan aidatlar'),
+('Kırtasiye Gideri', 'gider', 'Okul kırtasiye malzemeleri'),
+('Elektrik Faturası', 'gider', 'Elektrik giderleri'),
+('Temizlik Gideri', 'gider', 'Temizlik malzemeleri');
+`);
+}
 
-    try {
-      db.pragma('foreign_keys = ON');
-      db.prepare(createCategoriesTable).run();
-      db.prepare(createTransactionsTable).run();
-      db.prepare(createStudentsTable).run();
-      db.prepare(createStudentFeesTable).run();
-      db.prepare(createPaymentsTable).run();
-
-      // Eski şemadan gelen tabloları migrate et (eksik kolonları ekle)
-      ensureColumns('categories', [
-        { name: 'created_at', def: "TEXT DEFAULT (datetime('now'))" },
-        { name: 'updated_at', def: "TEXT DEFAULT (datetime('now'))" }
-      ]);
-      ensureColumns('transactions', [
-        { name: 'transaction_date', def: 'TEXT' },
-        { name: 'created_at', def: "TEXT DEFAULT (datetime('now'))" },
-        { name: 'updated_at', def: "TEXT DEFAULT (datetime('now'))" }
-      ]);
-      ensureColumns('students', [
-        { name: 'class_name', def: 'TEXT' },
-        { name: 'created_at', def: "TEXT DEFAULT (datetime('now'))" },
-        { name: 'updated_at', def: "TEXT DEFAULT (datetime('now'))" }
-      ]);
-      ensureColumns('student_fees', [
-        { name: 'created_at', def: "TEXT DEFAULT (datetime('now'))" },
-        { name: 'updated_at', def: "TEXT DEFAULT (datetime('now'))" }
-      ]);
-      ensureColumns('payments', [
-        { name: 'payment_method', def: 'TEXT' },
-        { name: 'receipt_number', def: 'TEXT' },
-        { name: 'notes', def: 'TEXT' },
-        { name: 'transaction_id', def: 'INTEGER' },
-        { name: 'created_at', def: "TEXT DEFAULT (datetime('now'))" },
-        { name: 'updated_at', def: "TEXT DEFAULT (datetime('now'))" }
-      ]);
-
-      insertDefaultCategories();
-      console.log('📊 Şema oluşturma / migration tamamlandı');
-      resolve();
-    } catch (e) {
-      reject(e);
+const db = {
+    async getAllCategories() {
+        const { data, error } = await supabase.from('categories').select('*').order('name');
+        if (error) throw error;
+        return data;
+    },
+    
+    async createCategory(category) {
+        const { data, error } = await supabase.from('categories').insert(category).select().single();
+        if (error) throw error;
+        return data;
+    },
+    
+    async getAllStudents() {
+        const { data, error } = await supabase.from('students').select('*').order('name');
+        if (error) throw error;
+        return data;
+    },
+    
+    async createStudent(student) {
+        const { data, error } = await supabase.from('students').insert(student).select().single();
+        if (error) throw error;
+        return data;
+    },
+    
+    async getAllTransactions() {
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*, categories(name), students(name)')
+            .order('transaction_date', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+    
+    async createTransaction(transaction) {
+        const { data, error } = await supabase.from('transactions').insert(transaction).select().single();
+        if (error) throw error;
+        return data;
     }
-  });
-}
+};
 
-// Varsayılan kategoriler ekle (Türkçe tür isimleriyle)
-function insertDefaultCategories() {
-  const defaults = [
-    { name: 'Maaş', type: 'gelir' },
-    { name: 'Aidat Geliri', type: 'gelir' },
-    { name: 'Kantin Satışları', type: 'gelir' },
-    { name: 'Market Alışverişi', type: 'gider' },
-    { name: 'Faturalar', type: 'gider' },
-    { name: 'Kırtasiye', type: 'gider' }
-  ];
-  const stmt = db.prepare('INSERT OR IGNORE INTO categories (name, type) VALUES (?, ?)');
-  const trx = db.transaction((rows) => {
-    rows.forEach(d => stmt.run(d.name, d.type));
-  });
-  trx(defaults);
-}
-
-function getDatabase() { return db; }
-
-module.exports = { db, getDatabase, initializeDatabase };
+module.exports = { initializeDatabase, db, supabase };

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Öğrenci Aidatları - Savi Bütçe v.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        .brand-font {
+            font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
+            font-weight: 700;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        .fee-card {
+            transition: all 0.3s ease;
+        }
+        .fee-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-paid {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        .status-pending {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        .status-overdue {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card-shadow-hover:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-xl">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-graduation-cap text-2xl mr-3"></i>
+                    <span class="font-bold text-lg brand-font">Savi Bütçe v.1</span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
+                        <i class="fas fa-home mr-2"></i>Ana Sayfa
+                    </a>
+                    <a href="/kategoriler.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
+                        <i class="fas fa-tags mr-2"></i>Kategoriler
+                    </a>
+                    <a href="/islemler.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
+                        <i class="fas fa-exchange-alt mr-2"></i>İşlemler
+                    </a>
+                    <a href="/ogrenciler.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
+                        <i class="fas fa-users mr-2"></i>Öğrenciler
+                    </a>
+                    <a href="/aidatlar.html" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-money-check-alt mr-2"></i>Aidatlar
+                    </a>
+                    <a href="/raporlar.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
+                        <i class="fas fa-chart-bar mr-2"></i>Raporlar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Page Header -->
+        <div class="bg-white rounded-xl card-shadow p-8 mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 brand-font">
+                        <i class="fas fa-money-check-alt mr-3 text-blue-600"></i>
+                        Savi Bütçe v.1
+                    </h1>
+                    <p class="text-gray-600 text-lg">Öğrenci aidatlarını yönetin, toplu atama yapın ve ödemelerini takip edin</p>
+                </div>
+                <div class="flex space-x-4">
+                    <button id="bulk-assign-btn" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center">
+                        <i class="fas fa-users mr-2"></i>
+                        Toplu Atama
+                    </button>
+                    <button id="add-fee-btn" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        Yeni Aidat
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-yellow-100 rounded-lg">
+                        <i class="ri-time-line text-yellow-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Bekleyen</p>
+                        <p id="pending-count" class="text-2xl font-bold text-gray-900">0</p>
+                        <p id="pending-amount" class="text-sm text-gray-600">₺0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <i class="ri-check-double-line text-green-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Ödenmiş</p>
+                        <p id="paid-count" class="text-2xl font-bold text-gray-900">0</p>
+                        <p id="paid-amount" class="text-sm text-gray-600">₺0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-red-100 rounded-lg">
+                        <i class="ri-alarm-warning-line text-red-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Gecikmiş</p>
+                        <p id="overdue-count" class="text-2xl font-bold text-gray-900">0</p>
+                        <p id="overdue-amount" class="text-sm text-gray-600">₺0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <i class="ri-money-dollar-circle-line text-blue-600 text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Toplam</p>
+                        <p id="total-count" class="text-2xl font-bold text-gray-900">0</p>
+                        <p id="total-amount" class="text-sm text-gray-600">₺0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Arama</label>
+                    <input type="text" id="search" placeholder="Öğrenci adı, açıklama..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sınıf</label>
+                    <select id="class-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Tüm Sınıflar</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Durum</label>
+                    <select id="status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Tüm Durumlar</option>
+                        <option value="pending">Bekleyen</option>
+                        <option value="paid">Ödenmiş</option>
+                        <option value="overdue">Gecikmiş</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Başlangıç Tarihi</label>
+                    <input type="date" id="date-start" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bitiş Tarihi</label>
+                    <input type="date" id="date-end" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-between">
+                <button id="filter-btn" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                    <i class="ri-filter-line mr-2"></i>Filtrele
+                </button>
+                <button id="clear-filters-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                    <i class="ri-refresh-line mr-2"></i>Filtreleri Temizle
+                </button>
+            </div>
+        </div>
+
+        <!-- Fees Table -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Aidat Listesi</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Öğrenci
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Açıklama
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Tutar
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Son Ödeme
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Durum
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Ödenmiş
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                İşlemler
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="fees-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Fees will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    <button id="prev-mobile" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Önceki
+                    </button>
+                    <button id="next-mobile" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Sonraki
+                    </button>
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            <span id="showing-from">1</span> - <span id="showing-to">10</span> arası gösteriliyor, 
+                            toplam <span id="total-items">0</span> kayıt
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            <button id="prev-desktop" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="ri-arrow-left-s-line"></i>
+                            </button>
+                            <span id="page-info" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                1 / 1
+                            </span>
+                            <button id="next-desktop" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i class="ri-arrow-right-s-line"></i>
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Fee Modal -->
+    <div id="add-fee-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Yeni Aidat Ekle</h3>
+                    <button id="close-add-modal" class="text-gray-400 hover:text-gray-600">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <form id="add-fee-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Öğrenci</label>
+                        <select id="student-select" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Öğrenci seçiniz...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Açıklama</label>
+                        <input type="text" id="fee-description" required minlength="2" maxlength="200" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Örn: Ekim 2024 Aidat">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tutar (₺)</label>
+                        <input type="number" id="fee-amount" required min="0.01" step="0.01" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Son Ödeme Tarihi</label>
+                        <input type="date" id="fee-due-date" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-add" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                            İptal
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            Aidat Ekle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Assignment Modal -->
+    <div id="bulk-assign-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Toplu Aidat Atama</h3>
+                    <button id="close-bulk-modal" class="text-gray-400 hover:text-gray-600">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <form id="bulk-assign-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Atama Türü</label>
+                        <select id="assignment-type" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seçiniz...</option>
+                            <option value="all">Tüm Öğrenciler</option>
+                            <option value="class">Sınıf Bazlı</option>
+                            <option value="selected">Seçili Öğrenciler</option>
+                        </select>
+                    </div>
+                    <div id="class-selection" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sınıflar</label>
+                        <div id="class-checkboxes" class="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                            <!-- Class checkboxes will be populated here -->
+                        </div>
+                    </div>
+                    <div id="student-selection" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Öğrenciler</label>
+                        <div id="student-checkboxes" class="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                            <!-- Student checkboxes will be populated here -->
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Açıklama</label>
+                        <input type="text" id="bulk-description" required minlength="2" maxlength="200" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Örn: Kasım 2024 Aidat">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tutar (₺)</label>
+                        <input type="number" id="bulk-amount" required min="0.01" step="0.01" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Son Ödeme Tarihi</label>
+                        <input type="date" id="bulk-due-date" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-bulk" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                            İptal
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+                            Toplu Atama Yap
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Ödeme Kaydet</h3>
+                    <button id="close-payment-modal" class="text-gray-400 hover:text-gray-600">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <form id="payment-form" class="space-y-4">
+                    <input type="hidden" id="payment-fee-id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Aidat Bilgisi</label>
+                        <p id="payment-fee-info" class="text-sm text-gray-600 bg-gray-50 p-2 rounded"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ödeme Tutarı (₺)</label>
+                        <input type="number" id="payment-amount" required min="0.01" step="0.01" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <p id="payment-remaining" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ödeme Tarihi</label>
+                        <input type="date" id="payment-date" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ödeme Yöntemi</label>
+                        <select id="payment-method" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seçiniz...</option>
+                            <option value="cash">Nakit</option>
+                            <option value="bank_transfer">Banka Havalesi</option>
+                            <option value="credit_card">Kredi Kartı</option>
+                            <option value="check">Çek</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Makbuz No (İsteğe Bağlı)</label>
+                        <input type="text" id="payment-receipt" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Örn: MKB-2024-001">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notlar (İsteğe Bağlı)</label>
+                        <textarea id="payment-notes" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Ek bilgiler..."></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" id="cancel-payment" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                            İptal
+                        </button>
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+                            Ödeme Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50"></div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl font-bold brand-font mb-4">Savi Bütçe v.1</h2>
+            <p class="text-gray-400 mb-4">Profesyonel Bütçe Yönetim Sistemi</p>
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="/" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-home mr-2"></i>Ana Sayfa
+                </a>
+                <a href="/islemler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-exchange-alt mr-2"></i>İşlemler
+                </a>
+                <a href="/kategoriler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-tags mr-2"></i>Kategoriler
+                </a>
+                <a href="/ogrenciler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-users mr-2"></i>Öğrenciler
+                </a>
+                <a href="/aidatlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-money-check-alt mr-2"></i>Aidatlar
+                </a>
+                <a href="/raporlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-chart-bar mr-2"></i>Raporlar
+                </a>
+            </div>
+            <hr class="border-gray-600 mb-4">
+            <p class="text-gray-500 text-sm">
+                © 2025 Savi Bütçe v.1 - Tüm hakları saklıdır.
+            </p>
+        </div>
+    </footer>
+
+    <script src="aidatlar.js"></script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kategori Yönetimi - Savi Bütçe v.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        .brand-font {
+            font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold brand-font">
+                <i class="fas fa-tags mr-2"></i>
+                Savi Bütçe v.1
+            </h1>
+            <nav>
+                <a href="/" class="hover:text-blue-200 mr-4">Ana Sayfa</a>
+                <a href="/islemler.html" class="hover:text-blue-200 mr-4">İşlemler</a>
+                <a href="/ogrenciler.html" class="hover:text-blue-200 mr-4">Öğrenciler</a>
+                <a href="/aidatlar.html" class="hover:text-blue-200 mr-4">Aidatlar</a>
+                <a href="/raporlar.html" class="hover:text-blue-200">Raporlar</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto mt-8 px-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Kategori Ekleme Formu -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-6 text-gray-800">
+                        <i class="fas fa-plus-circle mr-2 text-green-600"></i>
+                        Yeni Kategori Ekle
+                    </h2>
+                    
+                    <form id="categoryForm" class="space-y-4">
+                        <div>
+                            <label for="categoryName" class="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Adı *
+                            </label>
+                            <input 
+                                type="text" 
+                                id="categoryName" 
+                                name="name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Örn: Gıda, Ulaşım, Eğlence"
+                                required
+                            >
+                            <p class="text-sm text-gray-500 mt-1">En az 2, en fazla 50 karakter</p>
+                        </div>
+
+                        <div>
+                            <label for="categoryType" class="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori Türü *
+                            </label>
+                            <select 
+                                id="categoryType" 
+                                name="type"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                                <option value="">Seçiniz</option>
+                                <option value="gelir">
+                                    <i class="fas fa-arrow-up text-green-500"></i>
+                                    Gelir
+                                </option>
+                                <option value="gider">
+                                    <i class="fas fa-arrow-down text-red-500"></i>
+                                    Gider
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="categoryDescription" class="block text-sm font-medium text-gray-700 mb-2">
+                                Açıklama (Opsiyonel)
+                            </label>
+                            <textarea 
+                                id="categoryDescription" 
+                                name="description"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Kategori hakkında kısa açıklama..."
+                                maxlength="255"
+                            ></textarea>
+                            <p class="text-sm text-gray-500 mt-1">En fazla 255 karakter</p>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button 
+                                type="submit" 
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center"
+                            >
+                                <i class="fas fa-save mr-2"></i>
+                                <span id="submitButtonText">Kaydet</span>
+                            </button>
+                            
+                            <button 
+                                type="button" 
+                                id="cancelButton"
+                                class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition duration-200 hidden"
+                                onclick="cancelEdit()"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- İstatistikler -->
+                <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
+                        İstatistikler
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Toplam Kategori:</span>
+                            <span id="totalCategories" class="font-semibold text-blue-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Gelir Kategorileri:</span>
+                            <span id="incomeCategories" class="font-semibold text-green-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Gider Kategorileri:</span>
+                            <span id="expenseCategories" class="font-semibold text-red-600">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kategori Listesi -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md">
+                    <!-- Başlık ve Filtreler -->
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+                            <h2 class="text-xl font-semibold text-gray-800">
+                                <i class="fas fa-list mr-2 text-blue-600"></i>
+                                Kategori Listesi
+                            </h2>
+                            
+                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                                <!-- Arama -->
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        id="searchInput"
+                                        placeholder="Kategori ara..."
+                                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+                                    >
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                </div>
+                                
+                                <!-- Tür Filtresi -->
+                                <select id="typeFilter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Tüm Türler</option>
+                                    <option value="gelir">Gelir</option>
+                                    <option value="gider">Gider</option>
+                                </select>
+
+                                <!-- Yenile Butonu -->
+                                <button 
+                                    id="refreshButton"
+                                    class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center"
+                                    onclick="loadCategories()"
+                                >
+                                    <i class="fas fa-sync-alt mr-2"></i>
+                                    Yenile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tablo -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        #
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Kategori Adı
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Tür
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Açıklama
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Oluşturma Tarihi
+                                    </th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        İşlemler
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriesTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Loading State -->
+                                <tr id="loadingRow">
+                                    <td colspan="6" class="px-6 py-4 text-center">
+                                        <div class="flex items-center justify-center">
+                                            <i class="fas fa-spinner fa-spin mr-2 text-blue-600"></i>
+                                            <span class="text-gray-600">Kategoriler yükleniyor...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Empty State (will be shown by JavaScript) -->
+                                <tr id="emptyRow" class="hidden">
+                                    <td colspan="6" class="px-6 py-8 text-center">
+                                        <div class="flex flex-col items-center">
+                                            <i class="fas fa-folder-open text-gray-400 text-4xl mb-4"></i>
+                                            <p class="text-gray-600 text-lg">Henüz kategori bulunmuyor</p>
+                                            <p class="text-gray-500 text-sm">Sol taraftaki formu kullanarak yeni kategori ekleyebilirsiniz</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-gray-900">Kategori Sil</h3>
+            </div>
+            <p class="text-gray-600 mb-6">
+                "<span id="categoryToDelete" class="font-semibold"></span>" kategorisini silmek istediğinizden emin misiniz? 
+                Bu işlem geri alınamaz.
+            </p>
+            <div class="flex justify-end space-x-3">
+                <button 
+                    id="cancelDeleteButton"
+                    class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md transition duration-200"
+                >
+                    İptal
+                </button>
+                <button 
+                    id="confirmDeleteButton"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition duration-200"
+                >
+                    <i class="fas fa-trash mr-2"></i>
+                    Sil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl font-bold brand-font mb-4">Savi Bütçe v.1</h2>
+            <p class="text-gray-400 mb-4">Profesyonel Bütçe Yönetim Sistemi</p>
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="/" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-home mr-2"></i>Ana Sayfa
+                </a>
+                <a href="/islemler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-exchange-alt mr-2"></i>İşlemler
+                </a>
+                <a href="/kategoriler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-tags mr-2"></i>Kategoriler
+                </a>
+                <a href="/ogrenciler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-users mr-2"></i>Öğrenciler
+                </a>
+                <a href="/aidatlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-money-check-alt mr-2"></i>Aidatlar
+                </a>
+                <a href="/raporlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-chart-bar mr-2"></i>Raporlar
+                </a>
+            </div>
+            <hr class="border-gray-600 mb-4">
+            <p class="text-gray-500 text-sm">
+                © 2025 Savi Bütçe v.1 - Tüm hakları saklıdır.
+            </p>
+        </div>
+    </footer>
+
+    <script src="kategoriler.js"></script>
+</body>
+</html>

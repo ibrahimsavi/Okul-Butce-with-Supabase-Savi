@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ana Sayfa - Savi Bütçe v.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        .brand-font {
+            font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold brand-font">
+                <i class="fas fa-school mr-2"></i>
+                Savi Bütçe v.1
+            </h1>
+            <nav class="hidden md:block">
+                <a href="/" class="bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-md mr-2">Ana Sayfa</a>
+                <a href="/islemler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">İşlemler</a>
+                <a href="/kategoriler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Kategoriler</a>
+                <a href="/ogrenciler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Öğrenciler</a>
+                <a href="/aidatlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Aidatlar</a>
+                <a href="/raporlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md">Raporlar</a>
+            </nav>
+            <button id="mobileMenuButton" class="md:hidden">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <nav id="mobileMenu" class="md:hidden bg-blue-700 text-white p-4 hidden">
+        <a href="/" class="block py-2 px-4 bg-blue-800 rounded-md mb-2">Ana Sayfa</a>
+        <a href="/islemler.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">İşlemler</a>
+        <a href="/kategoriler.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Kategoriler</a>
+        <a href="/ogrenciler.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Öğrenciler</a>
+        <a href="/aidatlar.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Aidatlar</a>
+        <a href="/raporlar.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md">Raporlar</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto mt-8 px-4 pb-8">
+        <!-- Welcome Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex items-center justify-between flex-wrap">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Hoş Geldiniz!</h2>
+                    <p class="text-gray-600">Bugün: <span id="currentDate" class="font-medium"></span></p>
+                </div>
+                <div class="flex space-x-4 mt-4 lg:mt-0">
+                    <button 
+                        onclick="showQuickAddModal('gelir')"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition duration-200 flex items-center"
+                    >
+                        <i class="fas fa-plus mr-2"></i>
+                        Hızlı Gelir Ekle
+                    </button>
+                    <button 
+                        onclick="showQuickAddModal('gider')"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md transition duration-200 flex items-center"
+                    >
+                        <i class="fas fa-plus mr-2"></i>
+                        Hızlı Gider Ekle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Net Bakiye -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Net Bakiye</p>
+                        <p id="netBalance" class="text-2xl font-bold text-gray-800">₺0.00</p>
+                        <p class="text-xs text-gray-500 mt-1">Son 30 gün</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-wallet text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toplam Gelir -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Bu Ay Gelir</p>
+                        <p id="monthlyIncome" class="text-2xl font-bold text-green-600">₺0.00</p>
+                        <p id="incomeChange" class="text-xs text-gray-500 mt-1">Geçen aya göre</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-arrow-up text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toplam Gider -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Bu Ay Gider</p>
+                        <p id="monthlyExpense" class="text-2xl font-bold text-red-600">₺0.00</p>
+                        <p id="expenseChange" class="text-xs text-gray-500 mt-1">Geçen aya göre</p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-arrow-down text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bu Ay İşlem Sayısı -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Bu Ay İşlemler</p>
+                        <p id="monthlyTransactions" class="text-2xl font-bold text-purple-600">0</p>
+                        <p class="text-xs text-gray-500 mt-1">Toplam işlem</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-exchange-alt text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts and Recent Transactions -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Charts Section -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Monthly Trend Chart -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-chart-line mr-2 text-blue-600"></i>
+                        Aylık Gelir-Gider Trendi
+                    </h3>
+                    <div class="h-64">
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown Chart -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-chart-pie mr-2 text-green-600"></i>
+                        Bu Ay Kategori Dağılımı
+                    </h3>
+                    <div class="h-64">
+                        <canvas id="categoryBreakdownChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                            <i class="fas fa-clock mr-2 text-orange-600"></i>
+                            Son İşlemler
+                        </h3>
+                        <a href="/islemler.html" class="text-blue-600 hover:text-blue-800 text-sm">
+                            Tümünü Gör <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                    
+                    <div id="recentTransactions" class="space-y-3">
+                        <!-- Loading state -->
+                        <div class="flex items-center justify-center py-8">
+                            <i class="fas fa-spinner fa-spin mr-2 text-blue-600"></i>
+                            <span class="text-gray-600">İşlemler yükleniyor...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+                    <h3 class="text-xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-tachometer-alt mr-2 text-indigo-600"></i>
+                        Hızlı İstatistikler
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Toplam Kategori:</span>
+                            <span id="totalCategories" class="font-semibold text-blue-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Bugün İşlem:</span>
+                            <span id="todayTransactions" class="font-semibold text-green-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Ortalama İşlem:</span>
+                            <span id="avgTransaction" class="font-semibold text-purple-600">₺0.00</span>
+                        </div>
+                        <hr class="my-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">En Çok Kullanılan:</span>
+                            <span id="topCategory" class="font-semibold text-orange-600 text-sm">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Quick Add Modal -->
+    <div id="quickAddModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4 w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="quickAddTitle" class="text-lg font-semibold text-gray-900">Hızlı İşlem Ekle</h3>
+                <button onclick="hideQuickAddModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="quickAddForm" class="space-y-4">
+                <input type="hidden" id="quickType" name="type">
+                
+                <div>
+                    <label for="quickCategory" class="block text-sm font-medium text-gray-700 mb-2">
+                        Kategori *
+                    </label>
+                    <select 
+                        id="quickCategory" 
+                        name="category_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                    >
+                        <option value="">Kategori seçiniz</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="quickAmount" class="block text-sm font-medium text-gray-700 mb-2">
+                        Tutar (₺) *
+                    </label>
+                    <input 
+                        type="number" 
+                        id="quickAmount" 
+                        name="amount"
+                        step="0.01"
+                        min="0.01"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="0.00"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="quickDescription" class="block text-sm font-medium text-gray-700 mb-2">
+                        Açıklama *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="quickDescription" 
+                        name="description"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="İşlem açıklaması..."
+                        required
+                        maxlength="200"
+                    >
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button 
+                        type="submit" 
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200"
+                    >
+                        <i class="fas fa-save mr-2"></i>
+                        Kaydet
+                    </button>
+                    <button 
+                        type="button" 
+                        onclick="hideQuickAddModal()"
+                        class="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition duration-200"
+                    >
+                        İptal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl font-bold brand-font mb-4">Savi Bütçe v.1</h2>
+            <p class="text-gray-400 mb-4">Profesyonel Bütçe Yönetim Sistemi</p>
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="/" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-home mr-2"></i>Ana Sayfa
+                </a>
+                <a href="/islemler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-exchange-alt mr-2"></i>İşlemler
+                </a>
+                <a href="/kategoriler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-tags mr-2"></i>Kategoriler
+                </a>
+                <a href="/ogrenciler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-users mr-2"></i>Öğrenciler
+                </a>
+                <a href="/aidatlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-money-check-alt mr-2"></i>Aidatlar
+                </a>
+                <a href="/raporlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-chart-bar mr-2"></i>Raporlar
+                </a>
+            </div>
+            <hr class="border-gray-600 mb-4">
+            <p class="text-gray-500 text-sm">
+                © 2025 Savi Bütçe v.1 - Tüm hakları saklıdır.
+            </p>
+        </div>
+    </footer>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

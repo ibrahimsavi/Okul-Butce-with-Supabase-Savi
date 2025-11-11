@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelir Gider İşlemleri - Savi Bütçe v.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        .brand-font {
+            font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold brand-font">
+                <i class="fas fa-exchange-alt mr-2"></i>
+                Savi Bütçe v.1
+            </h1>
+            <nav>
+                <a href="/" class="hover:text-blue-200 mr-4">Ana Sayfa</a>
+                <a href="/kategoriler.html" class="hover:text-blue-200 mr-4">Kategoriler</a>
+                <a href="/ogrenciler.html" class="hover:text-blue-200 mr-4">Öğrenciler</a>
+                <a href="/aidatlar.html" class="hover:text-blue-200 mr-4">Aidatlar</a>
+                <a href="/raporlar.html" class="hover:text-blue-200">Raporlar</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto mt-8 px-4">
+        <!-- Dashboard/Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Net Bakiye -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Net Bakiye</p>
+                        <p id="netBalance" class="text-2xl font-bold text-gray-800">₺0.00</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-wallet text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toplam Gelir -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Toplam Gelir</p>
+                        <p id="totalIncome" class="text-2xl font-bold text-green-600">₺0.00</p>
+                        <p id="incomeCount" class="text-xs text-gray-500">0 işlem</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-arrow-up text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toplam Gider -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Toplam Gider</p>
+                        <p id="totalExpense" class="text-2xl font-bold text-red-600">₺0.00</p>
+                        <p id="expenseCount" class="text-xs text-gray-500">0 işlem</p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-arrow-down text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- İşlem Ekleme Formu -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-6 text-gray-800">
+                        <i class="fas fa-plus-circle mr-2 text-blue-600"></i>
+                        <span id="formTitle">Yeni İşlem Ekle</span>
+                    </h2>
+                    
+                    <form id="transactionForm" class="space-y-4">
+                        <div>
+                            <label for="transactionType" class="block text-sm font-medium text-gray-700 mb-2">
+                                İşlem Türü *
+                            </label>
+                            <select 
+                                id="transactionType" 
+                                name="type"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                                <option value="">Seçiniz</option>
+                                <option value="gelir">
+                                    💰 Gelir
+                                </option>
+                                <option value="gider">
+                                    💸 Gider
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="transactionCategory" class="block text-sm font-medium text-gray-700 mb-2">
+                                Kategori *
+                            </label>
+                            <select 
+                                id="transactionCategory" 
+                                name="category_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                                disabled
+                            >
+                                <option value="">Önce işlem türünü seçin</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="transactionAmount" class="block text-sm font-medium text-gray-700 mb-2">
+                                Tutar (₺) *
+                            </label>
+                            <input 
+                                type="number" 
+                                id="transactionAmount" 
+                                name="amount"
+                                step="0.01"
+                                min="0.01"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="0.00"
+                                required
+                            >
+                            <p class="text-sm text-gray-500 mt-1">Pozitif bir sayı giriniz</p>
+                        </div>
+
+                        <div>
+                            <label for="transactionDate" class="block text-sm font-medium text-gray-700 mb-2">
+                                İşlem Tarihi *
+                            </label>
+                            <input 
+                                type="date" 
+                                id="transactionDate" 
+                                name="transaction_date"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                required
+                            >
+                        </div>
+
+                        <div>
+                            <label for="transactionDescription" class="block text-sm font-medium text-gray-700 mb-2">
+                                Açıklama *
+                            </label>
+                            <textarea 
+                                id="transactionDescription" 
+                                name="description"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="İşlem detaylarını açıklayın..."
+                                required
+                                maxlength="500"
+                            ></textarea>
+                            <p class="text-sm text-gray-500 mt-1">En az 2, en fazla 500 karakter</p>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button 
+                                type="submit" 
+                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center"
+                            >
+                                <i class="fas fa-save mr-2"></i>
+                                <span id="submitButtonText">Kaydet</span>
+                            </button>
+                            
+                            <button 
+                                type="button" 
+                                id="cancelButton"
+                                class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition duration-200 hidden"
+                                onclick="cancelEdit()"
+                            >
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- İşlem Listesi -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-lg shadow-md">
+                    <!-- Başlık ve Filtreler -->
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+                            <h2 class="text-xl font-semibold text-gray-800">
+                                <i class="fas fa-list mr-2 text-blue-600"></i>
+                                İşlem Listesi
+                            </h2>
+                            
+                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                                <!-- Tarih Filtreleri -->
+                                <div class="flex space-x-2">
+                                    <input 
+                                        type="date" 
+                                        id="startDateFilter"
+                                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        title="Başlangıç Tarihi"
+                                    >
+                                    <input 
+                                        type="date" 
+                                        id="endDateFilter"
+                                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        title="Bitiş Tarihi"
+                                    >
+                                </div>
+
+                                <!-- Arama -->
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        id="searchInput"
+                                        placeholder="İşlem/kategori ara..."
+                                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-auto"
+                                    >
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                </div>
+                                
+                                <!-- Tür Filtresi -->
+                                <select id="typeFilter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Tüm İşlemler</option>
+                                    <option value="gelir">Gelirler</option>
+                                    <option value="gider">Giderler</option>
+                                </select>
+
+                                <!-- Kategori Filtresi -->
+                                <select id="categoryFilter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Tüm Kategoriler</option>
+                                </select>
+
+                                <!-- Yenile Butonu -->
+                                <button 
+                                    id="refreshButton"
+                                    class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md transition duration-200 flex items-center whitespace-nowrap"
+                                    onclick="loadTransactions()"
+                                >
+                                    <i class="fas fa-sync-alt mr-2"></i>
+                                    Yenile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tablo -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Tarih
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Türü
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Kategori
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Açıklama
+                                    </th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Tutar
+                                    </th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        İşlemler
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Loading State -->
+                                <tr id="loadingRow">
+                                    <td colspan="6" class="px-6 py-4 text-center">
+                                        <div class="flex items-center justify-center">
+                                            <i class="fas fa-spinner fa-spin mr-2 text-blue-600"></i>
+                                            <span class="text-gray-600">İşlemler yükleniyor...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Empty State (will be shown by JavaScript) -->
+                                <tr id="emptyRow" class="hidden">
+                                    <td colspan="6" class="px-6 py-8 text-center">
+                                        <div class="flex flex-col items-center">
+                                            <i class="fas fa-receipt text-gray-400 text-4xl mb-4"></i>
+                                            <p class="text-gray-600 text-lg">Henüz işlem bulunmuyor</p>
+                                            <p class="text-gray-500 text-sm">Sol taraftaki formu kullanarak yeni işlem ekleyebilirsiniz</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="paginationContainer" class="px-6 py-4 bg-gray-50 border-t border-gray-200 hidden">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span id="paginationInfo">0-0 of 0 işlem</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button 
+                                    id="prevPageButton"
+                                    class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onclick="prevPage()"
+                                    disabled
+                                >
+                                    <i class="fas fa-chevron-left mr-1"></i>
+                                    Önceki
+                                </button>
+                                <button 
+                                    id="nextPageButton"
+                                    class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onclick="nextPage()"
+                                    disabled
+                                >
+                                    Sonraki
+                                    <i class="fas fa-chevron-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-gray-900">İşlem Sil</h3>
+            </div>
+            <p class="text-gray-600 mb-6">
+                Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            <div class="bg-gray-50 p-3 rounded-md mb-4">
+                <p class="text-sm text-gray-600">
+                    <strong>Açıklama:</strong> <span id="transactionToDeleteDescription"></span><br>
+                    <strong>Tutar:</strong> <span id="transactionToDeleteAmount"></span><br>
+                    <strong>Tarih:</strong> <span id="transactionToDeleteDate"></span>
+                </p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button 
+                    id="cancelDeleteButton"
+                    class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md transition duration-200"
+                >
+                    İptal
+                </button>
+                <button 
+                    id="confirmDeleteButton"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition duration-200"
+                >
+                    <i class="fas fa-trash mr-2"></i>
+                    Sil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl font-bold brand-font mb-4">Savi Bütçe v.1</h2>
+            <p class="text-gray-400 mb-4">Profesyonel Bütçe Yönetim Sistemi</p>
+            <div class="flex justify-center space-x-6 mb-4">
+                <a href="/" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-home mr-2"></i>Ana Sayfa
+                </a>
+                <a href="/islemler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-exchange-alt mr-2"></i>İşlemler
+                </a>
+                <a href="/kategoriler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-tags mr-2"></i>Kategoriler
+                </a>
+                <a href="/ogrenciler.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-users mr-2"></i>Öğrenciler
+                </a>
+                <a href="/aidatlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-money-check-alt mr-2"></i>Aidatlar
+                </a>
+                <a href="/raporlar.html" class="hover:text-blue-400 transition duration-300">
+                    <i class="fas fa-chart-bar mr-2"></i>Raporlar
+                </a>
+            </div>
+            <hr class="border-gray-600 mb-4">
+            <p class="text-gray-500 text-sm">
+                © 2025 Savi Bütçe v.1 - Tüm hakları saklıdır.
+            </p>
+        </div>
+    </footer>
+
+    <script src="islemler.js"></script>
+</body>
+</html>

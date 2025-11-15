@@ -1,4 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -10,6 +12,16 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+const schemaSQLPath = path.join(__dirname, 'supabase', 'reset_schema.sql');
+
+function loadSchemaSQL() {
+    try {
+        return fs.readFileSync(schemaSQLPath, 'utf8');
+    } catch (error) {
+        console.error('❌ Supabase şema dosyası okunamadı:', error.message);
+        return null;
+    }
+}
 
 async function initializeDatabase() {
     try {
@@ -38,84 +50,90 @@ async function initializeDatabase() {
 }
 
 function printSQL() {
-    console.log(`
-CREATE TABLE categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    type VARCHAR(10) NOT NULL CHECK (type IN ('gelir', 'gider')),
-    description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE TABLE students (
-    id SERIAL PRIMARY KEY,
-    student_number VARCHAR(50) UNIQUE NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    class VARCHAR(50),
-    status VARCHAR(20) DEFAULT 'aktif',
-    phone VARCHAR(20),
-    email VARCHAR(255),
-    address TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE TABLE transactions (
-    id SERIAL PRIMARY KEY,
-    type VARCHAR(10) NOT NULL CHECK (type IN ('gelir', 'gider')),
-    amount DECIMAL(10,2) NOT NULL,
-    description TEXT NOT NULL,
-    category_id INTEGER REFERENCES categories(id),
-    student_id INTEGER REFERENCES students(id),
-    transaction_date DATE NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE TABLE fees (
-    id SERIAL PRIMARY KEY,
-    student_id INTEGER NOT NULL REFERENCES students(id),
-    amount DECIMAL(10,2) NOT NULL,
-    due_date DATE NOT NULL,
-    payment_date DATE,
-    status VARCHAR(20) DEFAULT 'beklemede',
-    description TEXT,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-INSERT INTO categories (name, type, description) VALUES 
-('Öğrenci Aidatı', 'gelir', 'Öğrencilerden alınan aidatlar'),
-('Kırtasiye Gideri', 'gider', 'Okul kırtasiye malzemeleri'),
-('Elektrik Faturası', 'gider', 'Elektrik giderleri'),
-('Temizlik Gideri', 'gider', 'Temizlik malzemeleri');
-`);
+    const sql = loadSchemaSQL();
+    if (!sql) {
+        console.log('⚠️ Şema SQL içeriği bulunamadı.');
+        return;
+    }
+    console.log(sql);
 }
+
+const categorySelect = 'id, kategori_adi:name, tur:type, aciklama:description, olusturma_tarihi:created_at, guncelleme_tarihi:updated_at';
+const studentSelect = `id,
+    ogrenci_numarasi:student_number,
+    ad:first_name,
+    soyad:last_name,
+    sinif:class_name,
+    sube:section,
+    durum:status,
+    veli_adi:parent_name,
+    veli_telefonu:parent_phone,
+    veli_eposta:parent_email,
+    adres:address,
+    olusturma_tarihi:created_at,
+    guncelleme_tarihi:updated_at`;
+const transactionSelect = `id,
+    islem_turu:type,
+    tutar:amount,
+    aciklama:description,
+    kategori_id,
+    ogrenci_id,
+    islem_tarihi:transaction_date,
+    notlar:notes,
+    olusturma_tarihi:created_at,
+    guncelleme_tarihi:updated_at`;
 
 const db = {
     async getAllCategories() {
-        const { data, error } = await supabase.from('categories').select('*').order('name');
+        const { data, error } = await supabase
+            .from('categories')
+            .select(categorySelect)
+            .order('kategori_adi');
         if (error) throw error;
         return data;
     },
     
     async createCategory(category) {
-        const { data, error } = await supabase.from('categories').insert(category).select().single();
+        const payload = {
+            kategori_adi: category.name,
+            tur: category.type,
+            aciklama: category.description ?? null
+        };
+        const { data, error } = await supabase
+            .from('categories')
+            .insert(payload)
+            .select(categorySelect)
+            .single();
         if (error) throw error;
         return data;
     },
     
     async getAllStudents() {
-        const { data, error } = await supabase.from('students').select('*').order('name');
+        const { data, error } = await supabase
+            .from('students')
+            .select(studentSelect)
+            .order('ad');
         if (error) throw error;
         return data;
     },
     
     async createStudent(student) {
-        const { data, error } = await supabase.from('students').insert(student).select().single();
+        const payload = {
+            ogrenci_numarasi: student.student_number ?? null,
+            ad: student.first_name,
+            soyad: student.last_name,
+            sinif: student.class_name,
+            sube: student.section ?? null,
+            veli_adi: student.parent_name ?? null,
+            veli_telefonu: student.parent_phone ?? null,
+            veli_eposta: student.parent_email ?? null,
+            adres: student.address ?? null
+        };
+        const { data, error } = await supabase
+            .from('students')
+            .insert(payload)
+            .select(studentSelect)
+            .single();
         if (error) throw error;
         return data;
     },
@@ -123,17 +141,29 @@ const db = {
     async getAllTransactions() {
         const { data, error } = await supabase
             .from('transactions')
-            .select('*, categories(name), students(name)')
-            .order('transaction_date', { ascending: false });
+            .select(`${transactionSelect}, categories!transactions_kategori_id_fkey(${categorySelect}), students!transactions_ogrenci_id_fkey(${studentSelect})`)
+            .order('islem_tarihi', { ascending: false });
         if (error) throw error;
         return data;
     },
     
     async createTransaction(transaction) {
-        const { data, error } = await supabase.from('transactions').insert(transaction).select().single();
+        const payload = {
+            islem_turu: transaction.type,
+            tutar: transaction.amount,
+            aciklama: transaction.description,
+            kategori_id: transaction.category_id ?? null,
+            ogrenci_id: transaction.student_id ?? null,
+            islem_tarihi: transaction.transaction_date,
+            notlar: transaction.notes ?? null
+        };
+        const { data, error } = await supabase
+            .from('transactions')
+            .insert(payload)
+            .select(transactionSelect)
+            .single();
         if (error) throw error;
         return data;
     }
 };
-
-module.exports = { initializeDatabase, db, supabase };
+module.exports = { initializeDatabase, db, supabase, loadSchemaSQL };

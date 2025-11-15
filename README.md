@@ -27,6 +27,15 @@ Modern budget management system powered by Supabase PostgreSQL database.
 3. Configure Supabase credentials in `.env`
 4. Run: `npm start`
 
+### Resetting the Supabase schema
+
+If you need to drop every table and recreate them with the new Turkish column names, run the SQL script under `supabase/reset_schema.sql` inside the Supabase SQL editor or the Supabase CLI:
+
+1. **Back up** your data first; the script wipes `payments`, `student_fees`, `transactions`, `students`, and `categories`.
+2. Open the Supabase Dashboard → SQL Editor.
+3. Paste the contents of `supabase/reset_schema.sql` and execute it.
+4. Re-run `node -e "require('./database').initializeDatabase()"` locally to verify the connection and that the tables now exist.
+
 ## Environment Variables
 
 Create a `.env` file with:

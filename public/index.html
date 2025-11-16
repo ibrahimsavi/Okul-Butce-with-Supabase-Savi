@@ -23,13 +23,19 @@
                 <i class="fas fa-school mr-2"></i>
                 Savi Bütçe v.1
             </h1>
-            <nav class="hidden md:block">
+            <nav class="hidden md:flex items-center">
                 <a href="/" class="bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-md mr-2">Ana Sayfa</a>
                 <a href="/islemler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">İşlemler</a>
                 <a href="/kategoriler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Kategoriler</a>
                 <a href="/ogrenciler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Öğrenciler</a>
                 <a href="/aidatlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Aidatlar</a>
-                <a href="/raporlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md">Raporlar</a>
+                <a href="/raporlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Raporlar</a>
+                <a href="/sifre-degistir.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">
+                    <i class="fas fa-key mr-1"></i>Şifre Değiştir
+                </a>
+                <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-3 py-2 rounded-md ml-2">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Çıkış
+                </button>
             </nav>
             <button id="mobileMenuButton" class="md:hidden">
                 <i class="fas fa-bars text-xl"></i>
@@ -44,7 +50,13 @@
         <a href="/kategoriler.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Kategoriler</a>
         <a href="/ogrenciler.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Öğrenciler</a>
         <a href="/aidatlar.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Aidatlar</a>
-        <a href="/raporlar.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md">Raporlar</a>
+        <a href="/raporlar.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">Raporlar</a>
+        <a href="/sifre-degistir.html" class="block py-2 px-4 hover:bg-blue-600 rounded-md mb-2">
+            <i class="fas fa-key mr-1"></i>Şifre Değiştir
+        </a>
+        <button id="logoutBtnMobile" class="block w-full text-left py-2 px-4 bg-red-600 hover:bg-red-700 rounded-md">
+            <i class="fas fa-sign-out-alt mr-1"></i>Çıkış
+        </button>
     </nav>
 
     <!-- Main Content -->
@@ -328,5 +340,25 @@
     </footer>
 
     <script src="dashboard.js"></script>
+    <script>
+        // Logout functionality
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Çıkış yapılırken bir hata oluştu');
+            }
+        }
+
+        document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+        document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
+    </script>
 </body>
 </html>

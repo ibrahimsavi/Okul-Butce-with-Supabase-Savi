@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const { initializeDatabase } = require('./database');
 
 // Router'ları import et
@@ -10,17 +12,43 @@ const studentsRouter = require('./routes/students');
 const feesRouter = require('./routes/fees');
 const paymentsRouter = require('./routes/payments');
 const reportsRouter = require('./routes/reports');
+const authRouter = require('./routes/auth');
+
+// Middleware'ları import et
+const { requireAuth } = require('./middleware/auth');
 
 // Express uygulamasını oluştur
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT) || 9876;
 
 // Middleware'ler
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Serve static files from public directory
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'savi-butce-secret-key-2025',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Public routes (login page and auth endpoints)
+app.use('/api/auth', authRouter);
+
+// Serve static files from public directory (login page is public)
+app.use('/login.html', express.static(path.join(__dirname, 'public', 'login.html')));
+
+// Protect all other routes with authentication
+app.use(requireAuth);
+
+// Serve other static files (protected)
 app.use(express.static('public'));
 
 // Kök yol: statik index.html'i gönder
@@ -43,7 +71,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Router'larını bağla
+// API Router'larını bağla (protected)
 app.use('/api/categories', categoriesRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/students', studentsRouter);

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şifre Değiştir - Savi Bütçe v.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+        .brand-font {
+            font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
+            font-weight: 700;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold brand-font">
+                <i class="fas fa-school mr-2"></i>
+                Savi Bütçe v.1
+            </h1>
+            <nav class="hidden md:flex items-center">
+                <a href="/" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Ana Sayfa</a>
+                <a href="/islemler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">İşlemler</a>
+                <a href="/kategoriler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Kategoriler</a>
+                <a href="/ogrenciler.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Öğrenciler</a>
+                <a href="/aidatlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Aidatlar</a>
+                <a href="/raporlar.html" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Raporlar</a>
+                <a href="/sifre-degistir.html" class="bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-md mr-2">Şifre Değiştir</a>
+                <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-3 py-2 rounded-md ml-2">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Çıkış
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto mt-8 px-4 pb-8">
+        <div class="max-w-2xl mx-auto">
+            <!-- Page Header -->
+            <div class="bg-white rounded-xl shadow-md p-8 mb-6">
+                <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2 brand-font">
+                    <i class="fas fa-key mr-3 text-blue-600"></i>
+                    Şifre Değiştir
+                </h2>
+                <p class="text-gray-600">Hesap güvenliğiniz için güçlü bir şifre kullanın</p>
+            </div>
+
+            <!-- User Info -->
+            <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6 rounded">
+                <div class="flex items-center">
+                    <i class="fas fa-user-circle text-blue-600 text-2xl mr-3"></i>
+                    <div>
+                        <p class="font-semibold text-gray-800" id="user-info">Yükleniyor...</p>
+                        <p class="text-sm text-gray-600">Oturum açmış kullanıcı</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password Form -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <form id="change-password-form" class="space-y-6">
+                    <!-- Current Password -->
+                    <div>
+                        <label for="current-password" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-2"></i>Mevcut Şifre
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="current-password" 
+                                required 
+                                autocomplete="current-password"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                                placeholder="Mevcut şifrenizi girin"
+                            >
+                            <button 
+                                type="button" 
+                                onclick="togglePassword('current-password')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- New Password -->
+                    <div>
+                        <label for="new-password" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-key mr-2"></i>Yeni Şifre
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="new-password" 
+                                required 
+                                minlength="6"
+                                autocomplete="new-password"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                                placeholder="Yeni şifrenizi girin (en az 6 karakter)"
+                            >
+                            <button 
+                                type="button" 
+                                onclick="togglePassword('new-password')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="mt-2">
+                            <div id="password-strength" class="text-xs space-y-1">
+                                <div class="flex items-center text-gray-500">
+                                    <i class="fas fa-circle text-xs mr-2"></i>
+                                    <span>En az 6 karakter</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-check-circle mr-2"></i>Yeni Şifre (Tekrar)
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="confirm-password" 
+                                required 
+                                minlength="6"
+                                autocomplete="new-password"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                                placeholder="Yeni şifrenizi tekrar girin"
+                            >
+                            <button 
+                                type="button" 
+                                onclick="togglePassword('confirm-password')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <p id="password-match" class="text-xs mt-1 hidden"></p>
+                    </div>
+
+                    <!-- Messages -->
+                    <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span id="error-text"></span>
+                    </div>
+
+                    <div id="success-message" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        <span id="success-text"></span>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex gap-4">
+                        <button 
+                            type="submit" 
+                            id="submit-btn"
+                            class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center justify-center"
+                        >
+                            <i class="fas fa-save mr-2"></i>
+                            <span id="submit-text">Şifreyi Değiştir</span>
+                        </button>
+                        <a 
+                            href="/"
+                            class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-300 flex items-center justify-center"
+                        >
+                            <i class="fas fa-times mr-2"></i>
+                            İptal
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Password Requirements -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                        Güvenli Şifre İpuçları
+                    </h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li><i class="fas fa-check text-green-600 mr-2"></i>En az 6 karakter uzunluğunda olmalı</li>
+                        <li><i class="fas fa-check text-green-600 mr-2"></i>Büyük ve küçük harfler kullanın</li>
+                        <li><i class="fas fa-check text-green-600 mr-2"></i>Sayılar ve özel karakterler ekleyin</li>
+                        <li><i class="fas fa-check text-green-600 mr-2"></i>Tahmin edilmesi zor bir kombinasyon seçin</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto text-center">
+            <h2 class="text-3xl font-bold brand-font mb-4">Savi Bütçe v.1</h2>
+            <p class="text-gray-400">© 2025 Savi Bütçe v.1 - Tüm hakları saklıdır.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/api/auth/session');
+                const data = await response.json();
+                if (data.authenticated) {
+                    document.getElementById('user-info').textContent = 
+                        `${data.user.fullName} (@${data.user.username})`;
+                }
+            } catch (error) {
+                console.error('User info error:', error);
+            }
+        }
+
+        // Toggle password visibility
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.nextElementSibling.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Check password match
+        document.getElementById('confirm-password').addEventListener('input', function() {
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = this.value;
+            const matchText = document.getElementById('password-match');
+            
+            if (confirmPassword.length > 0) {
+                matchText.classList.remove('hidden');
+                if (newPassword === confirmPassword) {
+                    matchText.textContent = '✓ Şifreler eşleşiyor';
+                    matchText.className = 'text-xs mt-1 text-green-600';
+                } else {
+                    matchText.textContent = '✗ Şifreler eşleşmiyor';
+                    matchText.className = 'text-xs mt-1 text-red-600';
+                }
+            } else {
+                matchText.classList.add('hidden');
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('change-password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const submitText = document.getElementById('submit-text');
+            const errorMessage = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const successMessage = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            
+            // Hide messages
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+            
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                errorText.textContent = 'Yeni şifreler eşleşmiyor';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            // Validate password length
+            if (newPassword.length < 6) {
+                errorText.textContent = 'Yeni şifre en az 6 karakter olmalıdır';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitText.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Değiştiriliyor...';
+            
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Success
+                    successText.textContent = data.message;
+                    successMessage.classList.remove('hidden');
+                    submitText.innerHTML = '<i class="fas fa-check mr-2"></i>Başarılı!';
+                    
+                    // Clear form
+                    document.getElementById('change-password-form').reset();
+                    document.getElementById('password-match').classList.add('hidden');
+                    
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    // Show error
+                    errorText.textContent = data.message || 'Şifre değiştirme başarısız';
+                    errorMessage.classList.remove('hidden');
+                    
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitText.innerHTML = '<i class="fas fa-save mr-2"></i>Şifreyi Değiştir';
+                }
+            } catch (error) {
+                console.error('Change password error:', error);
+                errorText.textContent = 'Bağlantı hatası. Lütfen tekrar deneyin.';
+                errorMessage.classList.remove('hidden');
+                
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitText.innerHTML = '<i class="fas fa-save mr-2"></i>Şifreyi Değiştir';
+            }
+        });
+
+        // Logout functionality
+        async function handleLogout() {
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Çıkış yapılırken bir hata oluştu');
+            }
+        }
+
+        document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+
+        // Load user info on page load
+        loadUserInfo();
+    </script>
+</body>
+</html>

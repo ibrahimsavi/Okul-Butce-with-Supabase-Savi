@@ -211,7 +211,7 @@ class FeesManager {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="px-6 py-8 text-center text-gray-500">
-                        <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                        <i class="fas fa-inbox text-4xl mb-2 block"></i>
                         Gösterilecek aidat bulunamadı
                     </td>
                 </tr>
@@ -271,20 +271,20 @@ class FeesManager {
                 ${fee.status !== 'paid' ? `
                     <button onclick="feesManager.showPaymentModal(${fee.id})" 
                             class="text-green-600 hover:text-green-900" title="Ödeme Kaydet">
-                        <i class="ri-money-dollar-circle-line"></i>
+                        <i class="fas fa-dollar-sign"></i>
                     </button>
                 ` : ''}
                 <button onclick="feesManager.editFee(${fee.id})" 
                         class="text-blue-600 hover:text-blue-900" title="Düzenle">
-                    <i class="ri-edit-line"></i>
+                    <i class="fas fa-edit"></i>
                 </button>
                 <button onclick="feesManager.deleteFee(${fee.id})" 
                         class="text-red-600 hover:text-red-900" title="Sil">
-                    <i class="ri-delete-bin-line"></i>
+                    <i class="fas fa-trash"></i>
                 </button>
                 <button onclick="feesManager.viewFeeDetails(${fee.id})" 
                         class="text-gray-600 hover:text-gray-900" title="Detaylar">
-                    <i class="ri-eye-line"></i>
+                    <i class="fas fa-eye"></i>
                 </button>
             </td>
         `;
@@ -720,10 +720,10 @@ Oluşturma Tarihi: ${this.formatDateTime(fee.created_at)}`);
         };
         
         const icons = {
-            success: 'ri-check-line',
-            error: 'ri-error-warning-line',
-            warning: 'ri-alarm-warning-line',
-            info: 'ri-information-line'
+            success: 'fas fa-check',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
         };
         
         notification.className = `notification ${typeStyles[type]} p-4 rounded-lg shadow-lg mb-4 flex items-center`;
@@ -731,7 +731,7 @@ Oluşturma Tarihi: ${this.formatDateTime(fee.created_at)}`);
             <i class="${icons[type]} text-lg mr-3"></i>
             <span class="flex-1">${message}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
-                <i class="ri-close-line"></i>
+                <i class="fas fa-times"></i>
             </button>
         `;
         

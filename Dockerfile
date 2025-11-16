@@ -1,26 +1,35 @@
-# Node.js 18 Alpine tabanlı hafif imaj kullan
-FROM node:18-alpine
+# Node.js 20 Alpine tabanlı hafif imaj kullan
+FROM node:20-alpine
 
 # Çalışma dizinini ayarla
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # package*.json dosyalarını kopyala
-COPY package*.json ./
+COPY package*.json package-lock.json* ./
 
-# Native modüller (better-sqlite3) için derleme araçları
+# Native modüller için derleme araçları
 RUN apk add --no-cache python3 make g++
 
 # Bağımlılıkları yükle (yalnızca production)
-RUN npm ci --omit=dev
+RUN npm ci --only=production
 
 # Uygulama kodunu kopyala
 COPY . .
 
-# Veri klasörü oluştur
-RUN mkdir -p data
+# Non-root user oluştur ve sahipliği değiştir
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
-# 3000 portunu aç
-EXPOSE 3000
+# Non-root user'a geç
+USER nodejs
+
+# 9876 portunu aç
+EXPOSE 9876
+
+# Health check ekle
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:9876/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Sunucuyu başlat
 CMD ["node", "server.js"]

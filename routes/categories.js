@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase } = require('../database');
-const db = getDatabase();
+const { supabase } = require('../database');
 
 // Ping endpoint - bağlantı testi
 router.get('/ping', (req, res) => {
@@ -9,9 +8,26 @@ router.get('/ping', (req, res) => {
 });
 
 // Kategorileri listele (GET /)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM categories ORDER BY type, name').all();
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, kategori_adi, tur, aciklama, olusturma_tarihi, guncelleme_tarihi')
+      .order('tur')
+      .order('kategori_adi');
+    
+    if (error) throw error;
+    
+    // API uyumluluğu için field isimlerini dönüştür
+    const rows = data.map(row => ({
+      id: row.id,
+      name: row.kategori_adi,
+      type: row.tur,
+      description: row.aciklama,
+      created_at: row.olusturma_tarihi,
+      updated_at: row.guncelleme_tarihi
+    }));
+    
     res.json({ success: true, data: rows, count: rows.length });
   } catch (err) {
     console.error('❌ Kategoriler listeleme hatası:', err.message);
@@ -20,56 +36,138 @@ router.get('/', (req, res) => {
 });
 
 // Yeni kategori oluştur (POST /)
-router.post('/', (req, res) => {
-  const { name, type } = req.body;
+router.post('/', async (req, res) => {
+  const { name, type, description } = req.body;
   if (!name || !type) {
     return res.status(400).json({ error: 'Kategori adı ve tipi zorunludur', required: ['name', 'type'] });
   }
   if (!['gelir', 'gider'].includes(type)) {
-    return res.status(400).json({ error: 'Kategori tipi sadece gelir (gelir) veya gider (gider) olabilir' });
+    return res.status(400).json({ error: 'Kategori tipi sadece gelir veya gider olabilir' });
   }
   try {
-    const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
-    const info = stmt.run(name.trim(), type);
-    res.status(201).json({ success: true, message: 'Kategori başarıyla oluşturuldu', data: { id: info.lastInsertRowid, name: name.trim(), type } });
-  } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(409).json({ error: 'Bu kategori adı zaten mevcut' });
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        kategori_adi: name.trim(),
+        tur: type,
+        aciklama: description || null
+      })
+      .select('id, kategori_adi, tur, aciklama')
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') { // Unique violation
+        return res.status(409).json({ error: 'Bu kategori adı zaten mevcut' });
+      }
+      throw error;
     }
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Kategori başarıyla oluşturuldu', 
+      data: { 
+        id: data.id, 
+        name: data.kategori_adi, 
+        type: data.tur,
+        description: data.aciklama
+      } 
+    });
+  } catch (err) {
     console.error('❌ Kategori oluşturma hatası:', err.message);
     res.status(500).json({ error: 'Kategori oluşturulamadı', message: err.message });
   }
 });
 
 // Kategori güncelle (PUT /:id)
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, type } = req.body;
+  const { name, type, description } = req.body;
   if (!id || isNaN(parseInt(id))) { return res.status(400).json({ error: 'Geçersiz kategori ID' }); }
   if (!name || !type) { return res.status(400).json({ error: 'Kategori adı ve tipi zorunludur', required: ['name','type'] }); }
   if (!['gelir','gider'].includes(type)) { return res.status(400).json({ error: 'Kategori tipi geçersiz (gelir/gider)' }); }
   try {
-    const info = db.prepare('UPDATE categories SET name = ?, type = ?, updated_at = datetime("now") WHERE id = ?').run(name.trim(), type, parseInt(id));
-    if (info.changes === 0) return res.status(404).json({ error: 'Kategori bulunamadı' });
-    res.json({ success: true, message: 'Kategori başarıyla güncellendi', data: { id: parseInt(id), name: name.trim(), type } });
+    const { data, error } = await supabase
+      .from('categories')
+      .update({
+        kategori_adi: name.trim(),
+        tur: type,
+        aciklama: description || null,
+        guncelleme_tarihi: new Date().toISOString()
+      })
+      .eq('id', parseInt(id))
+      .select('id, kategori_adi, tur, aciklama')
+      .single();
+    
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ error: 'Bu kategori adı zaten mevcut' });
+      }
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Kategori bulunamadı' });
+      }
+      throw error;
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Kategori başarıyla güncellendi', 
+      data: { 
+        id: data.id, 
+        name: data.kategori_adi, 
+        type: data.tur,
+        description: data.aciklama
+      } 
+    });
   } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') { return res.status(409).json({ error: 'Bu kategori adı zaten mevcut' }); }
     console.error('❌ Kategori güncelleme hatası:', err.message);
     res.status(500).json({ error: 'Kategori güncellenemedi', message: err.message });
   }
 });
 
 // Kategori sil (DELETE /:id)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   if (!id || isNaN(parseInt(id))) { return res.status(400).json({ error: 'Geçersiz kategori ID' }); }
   try {
-    const row = db.prepare('SELECT id,name FROM categories WHERE id = ?').get(parseInt(id));
-    if (!row) return res.status(404).json({ error: 'Kategori bulunamadı' });
-    const cnt = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE category_id = ?').get(parseInt(id));
-    if (cnt.count > 0) return res.status(409).json({ error: 'Bu kategoriye ait işlemler mevcut, kategori silinemez', relatedTransactions: cnt.count });
-    db.prepare('DELETE FROM categories WHERE id = ?').run(parseInt(id));
-    res.json({ success: true, message: 'Kategori başarıyla silindi', deletedCategory: { id: parseInt(id), name: row.name } });
+    // Kategori var mı kontrol et
+    const { data: category, error: fetchError } = await supabase
+      .from('categories')
+      .select('id, kategori_adi')
+      .eq('id', parseInt(id))
+      .single();
+    
+    if (fetchError || !category) {
+      return res.status(404).json({ error: 'Kategori bulunamadı' });
+    }
+    
+    // İlişkili işlem var mı kontrol et
+    const { count, error: countError } = await supabase
+      .from('transactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('kategori_id', parseInt(id));
+    
+    if (countError) throw countError;
+    
+    if (count > 0) {
+      return res.status(409).json({ 
+        error: 'Bu kategoriye ait işlemler mevcut, kategori silinemez', 
+        relatedTransactions: count 
+      });
+    }
+    
+    // Kategoriyi sil
+    const { error: deleteError } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', parseInt(id));
+    
+    if (deleteError) throw deleteError;
+    
+    res.json({ 
+      success: true, 
+      message: 'Kategori başarıyla silindi', 
+      deletedCategory: { id: parseInt(id), name: category.kategori_adi } 
+    });
   } catch (err) {
     console.error('❌ Kategori silme hatası:', err.message);
     res.status(500).json({ error: 'Kategori silinemedi', message: err.message });

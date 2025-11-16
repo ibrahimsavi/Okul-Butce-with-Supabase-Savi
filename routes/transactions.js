@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDatabase } = require('../database');
+const { supabase } = require('../database');
 const router = express.Router();
 
 // Ping endpoint
@@ -10,7 +10,6 @@ router.get('/ping', (req, res) => {
 // İşlemleri listele (GET /)
 router.get('/', async (req, res) => {
   try {
-    const db = getDatabase();
     const { 
       category_id, 
       type, 
@@ -21,84 +20,67 @@ router.get('/', async (req, res) => {
       search 
     } = req.query;
 
-    let query = `
-      SELECT 
-        t.id,
-        t.type,
-  t.amount,
-  t.description,
-  t.transaction_date,
-        t.created_at,
-        t.updated_at,
-        c.id as category_id,
-        c.name as category_name,
-        c.type as category_type
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
+    let query = supabase
+      .from('transactions')
+      .select(`
+        id, islem_turu, tutar, aciklama, islem_tarihi, olusturma_tarihi, guncelleme_tarihi,
+        kategori_id,
+        categories!transactions_kategori_id_fkey(id, kategori_adi, tur)
+      `, { count: 'exact' });
 
     // Filtreler
     if (category_id) {
-      query += ` AND t.category_id = ?`;
-      params.push(category_id);
+      query = query.eq('kategori_id', category_id);
     }
 
     if (type && ['gelir', 'gider'].includes(type)) {
-      query += ` AND t.type = ?`;
-      params.push(type);
+      query = query.eq('islem_turu', type);
     }
 
     if (start_date) {
-      query += ` AND DATE(t.transaction_date) >= DATE(?)`;
-      params.push(start_date);
+      query = query.gte('islem_tarihi', start_date);
     }
 
     if (end_date) {
-      query += ` AND DATE(t.transaction_date) <= DATE(?)`;
-      params.push(end_date);
+      query = query.lte('islem_tarihi', end_date);
     }
 
     if (search) {
-      query += ` AND (t.description LIKE ? OR c.name LIKE ?)`;
-      params.push(`%${search}%`, `%${search}%`);
+      query = query.ilike('aciklama', `%${search}%`);
     }
 
     // Sıralama ve sayfalama
-    query += ` ORDER BY t.transaction_date DESC, t.created_at DESC`;
-    query += ` LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), parseInt(offset));
+    query = query
+      .order('islem_tarihi', { ascending: false })
+      .order('olusturma_tarihi', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
-    const transactions = db.prepare(query).all(...params);
+    const { data, error, count } = await query;
 
-    // Toplam sayı için ayrı sorgu
-    let countQuery = `
-      SELECT COUNT(*) as total
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE 1=1
-    `;
-    
-    const countParams = params.slice(0, -2); // limit ve offset hariç
+    if (error) throw error;
 
-    if (category_id) countQuery += ` AND t.category_id = ?`;
-    if (type && ['gelir', 'gider'].includes(type)) countQuery += ` AND t.type = ?`;
-    if (start_date) countQuery += ` AND DATE(t.transaction_date) >= DATE(?)`;
-    if (end_date) countQuery += ` AND DATE(t.transaction_date) <= DATE(?)`;
-    if (search) countQuery += ` AND (t.description LIKE ? OR c.name LIKE ?)`;
-
-    const { total } = db.prepare(countQuery).get(...countParams);
+    // API uyumluluğu için field isimlerini dönüştür
+    const transactions = data.map(row => ({
+      id: row.id,
+      type: row.islem_turu,
+      amount: row.tutar,
+      description: row.aciklama,
+      transaction_date: row.islem_tarihi,
+      created_at: row.olusturma_tarihi,
+      updated_at: row.guncelleme_tarihi,
+      category_id: row.kategori_id,
+      category_name: row.categories?.kategori_adi || null,
+      category_type: row.categories?.tur || null
+    }));
 
     res.json({
       success: true,
       data: transactions,
       pagination: {
-        total,
+        total: count,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        hasMore: (parseInt(offset) + parseInt(limit)) < total
+        hasMore: (parseInt(offset) + parseInt(limit)) < count
       }
     });
 
@@ -115,11 +97,10 @@ router.get('/', async (req, res) => {
 // Yeni işlem oluştur (POST /)
 router.post('/', async (req, res) => {
   try {
-    const db = getDatabase();
-  const { type, amount, description, category_id, transaction_date } = req.body;
+    const { type, amount, description, category_id, transaction_date } = req.body;
 
     // Validasyon
-  if (!type || !['gelir', 'gider'].includes(type)) {
+    if (!type || !['gelir', 'gider'].includes(type)) {
       return res.status(400).json({
         success: false,
         message: 'Geçerli bir işlem türü belirtmelisiniz (gelir/gider)'
@@ -140,13 +121,6 @@ router.post('/', async (req, res) => {
       });
     }
 
-    if (description.trim().length > 500) {
-      return res.status(400).json({
-        success: false,
-        message: 'Açıklama en fazla 500 karakter olabilir'
-      });
-    }
-
     if (!category_id || isNaN(category_id)) {
       return res.status(400).json({
         success: false,
@@ -155,71 +129,62 @@ router.post('/', async (req, res) => {
     }
 
     // Kategori varlık kontrolü
-    const category = db.prepare('SELECT id, name, type FROM categories WHERE id = ?').get(category_id);
-    if (!category) {
+    const { data: category, error: catError } = await supabase
+      .from('categories')
+      .select('id, kategori_adi, tur')
+      .eq('id', category_id)
+      .maybeSingle();
+    
+    if (catError || !category) {
       return res.status(400).json({
         success: false,
         message: 'Seçilen kategori bulunamadı'
       });
     }
 
-    // Kategori türü ile işlem türü uyumlu mu?
-    if (category.type !== type) {
+    if (category.tur !== type) {
       return res.status(400).json({
         success: false,
-        message: `Seçilen kategori "${category.name}" ${category.type} türündedir, ${type} işlemi için uygun değil`
+        message: `Seçilen kategori "${category.kategori_adi}" ${category.tur} türündedir, ${type} işlemi için uygun değil`
       });
     }
 
     // Tarih kontrolü
-    let finalDate = transaction_date;
-    if (!finalDate) {
-      finalDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    } else {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(finalDate)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Tarih YYYY-MM-DD formatında olmalıdır'
-        });
-      }
-    }
+    let finalDate = transaction_date || new Date().toISOString().split('T')[0];
 
     // İşlem ekleme
-    const stmt = db.prepare(`
-  INSERT INTO transactions (type, amount, description, category_id, transaction_date)
-      VALUES (?, ?, ?, ?, ?)
-    `);
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        islem_turu: type,
+        tutar: parseFloat(amount),
+        aciklama: description.trim(),
+        kategori_id: parseInt(category_id),
+        islem_tarihi: finalDate
+      })
+      .select(`
+        id, islem_turu, tutar, aciklama, islem_tarihi, olusturma_tarihi,
+        kategori_id,
+        categories!transactions_kategori_id_fkey(id, kategori_adi, tur)
+      `)
+      .single();
 
-    const result = stmt.run(
-      type,
-      parseFloat(amount),
-      description.trim(),
-      parseInt(category_id),
-      finalDate
-    );
-
-    // Eklenen işlemi getir
-    const newTransaction = db.prepare(`
-      SELECT 
-        t.id,
-        t.type,
-        t.amount,
-        t.description,
-        t.transaction_date,
-        t.created_at,
-        c.id as category_id,
-        c.name as category_name,
-        c.type as category_type
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.id = ?
-    `).get(result.lastInsertRowid);
+    if (error) throw error;
 
     res.status(201).json({
       success: true,
       message: 'İşlem başarıyla oluşturuldu',
-      data: newTransaction
+      data: {
+        id: data.id,
+        type: data.islem_turu,
+        amount: data.tutar,
+        description: data.aciklama,
+        transaction_date: data.islem_tarihi,
+        created_at: data.olusturma_tarihi,
+        category_id: data.kategori_id,
+        category_name: data.categories?.kategori_adi,
+        category_type: data.categories?.tur
+      }
     });
 
   } catch (error) {
@@ -235,7 +200,6 @@ router.post('/', async (req, res) => {
 // Tekil işlem getir (GET /:id)
 router.get('/:id', async (req, res) => {
   try {
-    const db = getDatabase();
     const { id } = req.params;
 
     if (isNaN(id)) {
@@ -245,24 +209,19 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    const transaction = db.prepare(`
-      SELECT 
-        t.id,
-        t.type,
-        t.amount,
-        t.description,
-        t.transaction_date,
-        t.created_at,
-        t.updated_at,
-        c.id as category_id,
-        c.name as category_name,
-        c.type as category_type
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.id = ?
-    `).get(id);
+    const { data, error } = await supabase
+      .from('transactions')
+      .select(`
+        id, islem_turu, tutar, aciklama, islem_tarihi, olusturma_tarihi, guncelleme_tarihi,
+        kategori_id,
+        categories!transactions_kategori_id_fkey(id, kategori_adi, tur)
+      `)
+      .eq('id', id)
+      .maybeSingle();
 
-    if (!transaction) {
+    if (error) throw error;
+
+    if (!data) {
       return res.status(404).json({
         success: false,
         message: 'İşlem bulunamadı'
@@ -271,7 +230,18 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: transaction
+      data: {
+        id: data.id,
+        type: data.islem_turu,
+        amount: data.tutar,
+        description: data.aciklama,
+        transaction_date: data.islem_tarihi,
+        created_at: data.olusturma_tarihi,
+        updated_at: data.guncelleme_tarihi,
+        category_id: data.kategori_id,
+        category_name: data.categories?.kategori_adi,
+        category_type: data.categories?.tur
+      }
     });
 
   } catch (error) {
@@ -287,23 +257,13 @@ router.get('/:id', async (req, res) => {
 // İşlem güncelle (PUT /:id)
 router.put('/:id', async (req, res) => {
   try {
-    const db = getDatabase();
     const { id } = req.params;
-  const { type, amount, description, category_id, transaction_date } = req.body;
+    const { type, amount, description, category_id, transaction_date } = req.body;
 
     if (isNaN(id)) {
       return res.status(400).json({
         success: false,
         message: 'Geçerli bir işlem ID belirtmelisiniz'
-      });
-    }
-
-    // Mevcut işlem kontrolü
-    const existingTransaction = db.prepare('SELECT * FROM transactions WHERE id = ?').get(id);
-    if (!existingTransaction) {
-      return res.status(404).json({
-        success: false,
-        message: 'Güncellenecek işlem bulunamadı'
       });
     }
 
@@ -329,13 +289,6 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    if (description.trim().length > 500) {
-      return res.status(400).json({
-        success: false,
-        message: 'Açıklama en fazla 500 karakter olabilir'
-      });
-    }
-
     if (!category_id || isNaN(category_id)) {
       return res.status(400).json({
         success: false,
@@ -343,72 +296,71 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    // Kategori varlık kontrolü
-    const category = db.prepare('SELECT id, name, type FROM categories WHERE id = ?').get(category_id);
-    if (!category) {
+    // Kategori kontrolü
+    const { data: category, error: catError } = await supabase
+      .from('categories')
+      .select('id, kategori_adi, tur')
+      .eq('id', category_id)
+      .maybeSingle();
+    
+    if (catError || !category) {
       return res.status(400).json({
         success: false,
         message: 'Seçilen kategori bulunamadı'
       });
     }
 
-    if (category.type !== type) {
+    if (category.tur !== type) {
       return res.status(400).json({
         success: false,
-        message: `Seçilen kategori "${category.name}" ${category.type} türündedir, ${type} işlemi için uygun değil`
+        message: `Seçilen kategori "${category.kategori_adi}" ${category.tur} türündedir, ${type} işlemi için uygun değil`
       });
     }
 
-    // Tarih kontrolü
-    let finalDate = transaction_date || existingTransaction.transaction_date;
-    if (transaction_date) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(finalDate)) {
-        return res.status(400).json({
+    // Güncelleme
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({
+        islem_turu: type,
+        tutar: parseFloat(amount),
+        aciklama: description.trim(),
+        kategori_id: parseInt(category_id),
+        islem_tarihi: transaction_date || new Date().toISOString().split('T')[0],
+        guncelleme_tarihi: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select(`
+        id, islem_turu, tutar, aciklama, islem_tarihi, olusturma_tarihi, guncelleme_tarihi,
+        kategori_id,
+        categories!transactions_kategori_id_fkey(id, kategori_adi, tur)
+      `)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({
           success: false,
-          message: 'Tarih YYYY-MM-DD formatında olmalıdır'
+          message: 'Güncellenecek işlem bulunamadı'
         });
       }
+      throw error;
     }
-
-    // Güncelleme
-    const stmt = db.prepare(`
-      UPDATE transactions 
-      SET type = ?, amount = ?, description = ?, category_id = ?, transaction_date = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-
-    stmt.run(
-      type,
-      parseFloat(amount),
-      description.trim(),
-      parseInt(category_id),
-      finalDate,
-      id
-    );
-
-    // Güncellenmiş işlemi getir
-    const updatedTransaction = db.prepare(`
-      SELECT 
-        t.id,
-        t.type,
-        t.amount,
-        t.description,
-        t.transaction_date,
-        t.created_at,
-        t.updated_at,
-        c.id as category_id,
-        c.name as category_name,
-        c.type as category_type
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.id = ?
-    `).get(id);
 
     res.json({
       success: true,
       message: 'İşlem başarıyla güncellendi',
-      data: updatedTransaction
+      data: {
+        id: data.id,
+        type: data.islem_turu,
+        amount: data.tutar,
+        description: data.aciklama,
+        transaction_date: data.islem_tarihi,
+        created_at: data.olusturma_tarihi,
+        updated_at: data.guncelleme_tarihi,
+        category_id: data.kategori_id,
+        category_name: data.categories?.kategori_adi,
+        category_type: data.categories?.tur
+      }
     });
 
   } catch (error) {
@@ -424,7 +376,6 @@ router.put('/:id', async (req, res) => {
 // İşlem sil (DELETE /:id)
 router.delete('/:id', async (req, res) => {
   try {
-    const db = getDatabase();
     const { id } = req.params;
 
     if (isNaN(id)) {
@@ -434,25 +385,13 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    // Mevcut işlem kontrolü
-    const existingTransaction = db.prepare('SELECT * FROM transactions WHERE id = ?').get(id);
-    if (!existingTransaction) {
-      return res.status(404).json({
-        success: false,
-        message: 'Silinecek işlem bulunamadı'
-      });
-    }
-
     // İşlem silme
-    const stmt = db.prepare('DELETE FROM transactions WHERE id = ?');
-    const result = stmt.run(id);
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
 
-    if (result.changes === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'İşlem silinemedi'
-      });
-    }
+    if (error) throw error;
 
     res.json({
       success: true,
@@ -473,42 +412,48 @@ router.delete('/:id', async (req, res) => {
 // İstatistikler endpoint
 router.get('/stats/summary', async (req, res) => {
   try {
-    const db = getDatabase();
     const { start_date, end_date } = req.query;
 
-    let dateCondition = '';
-    const params = [];
+    let query = supabase
+      .from('transactions')
+      .select('islem_turu, tutar');
 
     if (start_date && end_date) {
-      dateCondition = 'WHERE DATE(transaction_date) BETWEEN DATE(?) AND DATE(?)';
-      params.push(start_date, end_date);
+      query = query.gte('islem_tarihi', start_date).lte('islem_tarihi', end_date);
     } else if (start_date) {
-      dateCondition = 'WHERE DATE(transaction_date) >= DATE(?)';
-      params.push(start_date);
+      query = query.gte('islem_tarihi', start_date);
     } else if (end_date) {
-      dateCondition = 'WHERE DATE(transaction_date) <= DATE(?)';
-      params.push(end_date);
+      query = query.lte('islem_tarihi', end_date);
     }
 
-    const summary = db.prepare(`
-      SELECT 
-        type,
-        COUNT(*) as transaction_count,
-        ROUND(SUM(amount), 2) as total_amount,
-        ROUND(AVG(amount), 2) as average_amount
-      FROM transactions 
-      ${dateCondition}
-      GROUP BY type
-    `).all(...params);
+    const { data, error } = await query;
 
+    if (error) throw error;
+
+    // Manuel hesaplama
     const totals = {
       gelir: { transaction_count: 0, total_amount: 0, average_amount: 0 },
       gider: { transaction_count: 0, total_amount: 0, average_amount: 0 }
     };
 
-    summary.forEach(item => {
-      totals[item.type] = item;
+    data.forEach(item => {
+      totals[item.islem_turu].transaction_count++;
+      totals[item.islem_turu].total_amount += parseFloat(item.tutar);
     });
+
+    totals.gelir.average_amount = totals.gelir.transaction_count > 0 
+      ? totals.gelir.total_amount / totals.gelir.transaction_count 
+      : 0;
+    
+    totals.gider.average_amount = totals.gider.transaction_count > 0 
+      ? totals.gider.total_amount / totals.gider.transaction_count 
+      : 0;
+
+    // Yuvarla
+    totals.gelir.total_amount = Math.round(totals.gelir.total_amount * 100) / 100;
+    totals.gider.total_amount = Math.round(totals.gider.total_amount * 100) / 100;
+    totals.gelir.average_amount = Math.round(totals.gelir.average_amount * 100) / 100;
+    totals.gider.average_amount = Math.round(totals.gider.average_amount * 100) / 100;
 
     const netBalance = totals.gelir.total_amount - totals.gider.total_amount;
 

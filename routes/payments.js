@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDatabase } = require('../database');
+const { supabase } = require('../database');
 const router = express.Router();
 
 // Ping endpoint
@@ -10,115 +10,60 @@ router.get('/ping', (req, res) => {
 // Ödemeleri listele (GET /)
 router.get('/', async (req, res) => {
   try {
-    const db = getDatabase();
-    const { 
-      fee_id, 
-      student_id, 
-      class_name,
-      date_start, 
-      date_end,
-      payment_method,
-      limit = 50, 
-      offset = 0 
-    } = req.query;
+    const { fee_id, student_id, limit = 50, offset = 0 } = req.query;
 
-    let query = `
-      SELECT 
-        p.id,
-        p.amount,
-        p.payment_date,
-        p.payment_method,
-        p.receipt_number,
-        p.notes,
-        p.created_at,
-        p.updated_at,
-        sf.id as fee_id,
-        sf.description as fee_description,
-        sf.amount as fee_amount,
-        sf.due_date as fee_due_date,
-        s.id as student_id,
-        s.first_name,
-        s.last_name,
-        s.student_number,
-        s.class_name,
-        s.section,
-        t.id as transaction_id,
-        t.description as transaction_description
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      INNER JOIN students s ON sf.student_id = s.id
-      LEFT JOIN transactions t ON p.transaction_id = t.id
-      WHERE 1=1
-    `;
-    
-    const params = [];
+    let query = supabase
+      .from('payments')
+      .select(`
+        id, tutar, odeme_tarihi, odeme_yontemi, makbuz_numarasi, notlar, olusturma_tarihi,
+        aidat_id,
+        student_fees!payments_aidat_id_fkey(
+          id, aciklama, tutar, son_odeme_tarihi, durum,
+          ogrenci_id,
+          students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube)
+        )
+      `, { count: 'exact' });
 
-    // Filtreler
     if (fee_id) {
-      query += ` AND p.fee_id = ?`;
-      params.push(fee_id);
+      query = query.eq('aidat_id', fee_id);
     }
 
-    if (student_id) {
-      query += ` AND s.id = ?`;
-      params.push(student_id);
-    }
+    query = query
+      .order('odeme_tarihi', { ascending: false })
+      .order('olusturma_tarihi', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
-    if (class_name) {
-      query += ` AND s.class_name LIKE ?`;
-      params.push(`%${class_name}%`);
-    }
+    const { data, error, count } = await query;
 
-    if (date_start) {
-      query += ` AND DATE(p.payment_date) >= DATE(?)`;
-      params.push(date_start);
-    }
+    if (error) throw error;
 
-    if (date_end) {
-      query += ` AND DATE(p.payment_date) <= DATE(?)`;
-      params.push(date_end);
-    }
-
-    if (payment_method && ['cash', 'bank_transfer', 'credit_card', 'check'].includes(payment_method)) {
-      query += ` AND p.payment_method = ?`;
-      params.push(payment_method);
-    }
-
-    // Sıralama ve sayfalama
-    query += ` ORDER BY p.payment_date DESC, p.created_at DESC`;
-    query += ` LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit), parseInt(offset));
-
-    const payments = db.prepare(query).all(...params);
-
-    // Toplam sayı için ayrı sorgu
-    let countQuery = `
-      SELECT COUNT(p.id) as total
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      INNER JOIN students s ON sf.student_id = s.id
-      WHERE 1=1
-    `;
-    
-    const countParams = params.slice(0, -2); // limit ve offset hariç
-
-    if (fee_id) countQuery += ` AND p.fee_id = ?`;
-    if (student_id) countQuery += ` AND s.id = ?`;
-    if (class_name) countQuery += ` AND s.class_name LIKE ?`;
-    if (date_start) countQuery += ` AND DATE(p.payment_date) >= DATE(?)`;
-    if (date_end) countQuery += ` AND DATE(p.payment_date) <= DATE(?)`;
-    if (payment_method && ['cash', 'bank_transfer', 'credit_card', 'check'].includes(payment_method)) countQuery += ` AND p.payment_method = ?`;
-
-    const { total } = db.prepare(countQuery).get(...countParams);
+    const payments = data.map(row => ({
+      id: row.id,
+      amount: row.tutar,
+      payment_date: row.odeme_tarihi,
+      payment_method: row.odeme_yontemi,
+      receipt_number: row.makbuz_numarasi,
+      notes: row.notlar,
+      created_at: row.olusturma_tarihi,
+      fee_id: row.aidat_id,
+      fee_description: row.student_fees?.aciklama,
+      fee_amount: row.student_fees?.tutar,
+      fee_due_date: row.student_fees?.son_odeme_tarihi,
+      student_id: row.student_fees?.ogrenci_id,
+      first_name: row.student_fees?.students?.ad,
+      last_name: row.student_fees?.students?.soyad,
+      student_number: row.student_fees?.students?.ogrenci_numarasi,
+      class_name: row.student_fees?.students?.sinif
+    }));
 
     res.json({
       success: true,
       data: payments,
       pagination: {
-        total,
+        total: count,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        hasMore: (parseInt(offset) + parseInt(limit)) < total
+        hasMore: (parseInt(offset) + parseInt(limit)) < count
       }
     });
 
@@ -135,18 +80,15 @@ router.get('/', async (req, res) => {
 // Yeni ödeme oluştur (POST /)
 router.post('/', async (req, res) => {
   try {
-    const db = getDatabase();
     const { 
       fee_id, 
       amount, 
       payment_date, 
       payment_method, 
       receipt_number, 
-      notes,
-      create_transaction = true 
+      notes
     } = req.body;
 
-    // Validasyon
     if (!fee_id || isNaN(fee_id)) {
       return res.status(400).json({
         success: false,
@@ -168,15 +110,6 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Tarih kontrolü
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(payment_date)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Ödeme tarihi YYYY-MM-DD formatında olmalıdır'
-      });
-    }
-
     if (!payment_method || !['cash', 'bank_transfer', 'credit_card', 'check'].includes(payment_method)) {
       return res.status(400).json({
         success: false,
@@ -184,30 +117,29 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Aidat varlık ve tutar kontrolü
-    const fee = db.prepare(`
-      SELECT 
-        sf.*,
-        s.first_name,
-        s.last_name,
-        s.class_name,
-        s.section,
-        COALESCE(SUM(p.amount), 0) as paid_amount
-      FROM student_fees sf
-      INNER JOIN students s ON sf.student_id = s.id
-      LEFT JOIN payments p ON sf.id = p.fee_id
-      WHERE sf.id = ?
-      GROUP BY sf.id
-    `).get(fee_id);
-
-    if (!fee) {
+    // Aidat kontrolü
+    const { data: fee, error: feeError } = await supabase
+      .from('student_fees')
+      .select('id, tutar, durum')
+      .eq('id', fee_id)
+      .maybeSingle();
+    
+    if (feeError || !fee) {
       return res.status(400).json({
         success: false,
         message: 'Seçilen aidat bulunamadı'
       });
     }
 
-    const remainingAmount = fee.amount - fee.paid_amount;
+    // Önceki ödemeler
+    const { data: prevPayments } = await supabase
+      .from('payments')
+      .select('tutar')
+      .eq('aidat_id', fee_id);
+    
+    const paidAmount = prevPayments?.reduce((sum, p) => sum + parseFloat(p.tutar), 0) || 0;
+    const remainingAmount = parseFloat(fee.tutar) - paidAmount;
+
     if (parseFloat(amount) > remainingAmount) {
       return res.status(400).json({
         success: false,
@@ -215,91 +147,47 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Transaction başlat
-    const transaction = db.transaction((paymentData) => {
-      let transactionId = null;
+    // Ödeme kaydı oluştur
+    const { data, error } = await supabase
+      .from('payments')
+      .insert({
+        aidat_id: parseInt(fee_id),
+        tutar: parseFloat(amount),
+        odeme_tarihi: payment_date,
+        odeme_yontemi: payment_method,
+        makbuz_numarasi: receipt_number || null,
+        notlar: notes || null
+      })
+      .select()
+      .single();
 
-      // İsteniyorsa transaction oluştur
-      if (create_transaction) {
-        const transactionStmt = db.prepare(`
-          INSERT INTO transactions (description, amount, type, category_id, transaction_date)
-          VALUES (?, ?, 'gelir', ?, ?)
-        `);
+    if (error) throw error;
 
-        // Varsayılan gelir kategorisi al
-        const defaultCategory = db.prepare("SELECT id FROM categories WHERE type = 'gelir' LIMIT 1").get();
-        
-        if (defaultCategory) {
-          const transactionResult = transactionStmt.run(
-            `Aidat Ödemesi - ${fee.first_name} ${fee.last_name} - ${fee.description}`,
-            parseFloat(amount),
-            defaultCategory.id,
-            payment_date
-          );
-          transactionId = transactionResult.lastInsertRowid;
-        }
-      }
-
-      // Ödeme kaydını oluştur
-      const paymentStmt = db.prepare(`
-        INSERT INTO payments (fee_id, amount, payment_date, payment_method, receipt_number, notes, transaction_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const paymentResult = paymentStmt.run(
-        parseInt(fee_id),
-        parseFloat(amount),
-        payment_date,
-        payment_method,
-        receipt_number || null,
-        notes || null,
-        transactionId
-      );
-
-      // Aidat durumunu güncelle
-      const newPaidAmount = fee.paid_amount + parseFloat(amount);
-      const newStatus = newPaidAmount >= fee.amount ? 'paid' : 'pending';
-      
-      db.prepare(`
-        UPDATE student_fees 
-        SET status = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ?
-      `).run(newStatus, fee_id);
-
-      return {
-        paymentId: paymentResult.lastInsertRowid,
-        transactionId,
-        newStatus,
-        totalPaid: newPaidAmount
-      };
-    });
-
-    const result = transaction({ fee_id, amount, payment_date, payment_method, receipt_number, notes });
-
-    // Oluşturulan ödemeyi getir
-    const newPayment = db.prepare(`
-      SELECT 
-        p.*,
-        sf.description as fee_description,
-        sf.amount as fee_amount,
-        s.first_name,
-        s.last_name,
-        s.student_number,
-        s.class_name
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      INNER JOIN students s ON sf.student_id = s.id
-      WHERE p.id = ?
-    `).get(result.paymentId);
+    // Aidat durumunu güncelle
+    const newPaidAmount = paidAmount + parseFloat(amount);
+    const newStatus = newPaidAmount >= parseFloat(fee.tutar) ? 'paid' : 'pending';
+    
+    await supabase
+      .from('student_fees')
+      .update({ 
+        durum: newStatus,
+        guncelleme_tarihi: new Date().toISOString()
+      })
+      .eq('id', fee_id);
 
     res.status(201).json({
       success: true,
       message: 'Ödeme başarıyla kaydedildi',
       data: {
-        ...newPayment,
-        fee_status: result.newStatus,
-        total_paid: result.totalPaid,
-        transaction_created: !!result.transactionId
+        id: data.id,
+        amount: data.tutar,
+        payment_date: data.odeme_tarihi,
+        payment_method: data.odeme_yontemi,
+        receipt_number: data.makbuz_numarasi,
+        notes: data.notlar,
+        created_at: data.olusturma_tarihi,
+        fee_status: newStatus,
+        total_paid: newPaidAmount
       }
     });
 
@@ -316,7 +204,6 @@ router.post('/', async (req, res) => {
 // Tekil ödeme getir (GET /:id)
 router.get('/:id', async (req, res) => {
   try {
-    const db = getDatabase();
     const { id } = req.params;
 
     if (isNaN(id)) {
@@ -326,30 +213,23 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    const payment = db.prepare(`
-      SELECT 
-        p.*,
-        sf.id as fee_id,
-        sf.description as fee_description,
-        sf.amount as fee_amount,
-        sf.due_date as fee_due_date,
-        sf.status as fee_status,
-        s.id as student_id,
-        s.first_name,
-        s.last_name,
-        s.student_number,
-        s.class_name,
-        s.section,
-        t.id as transaction_id,
-        t.description as transaction_description
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      INNER JOIN students s ON sf.student_id = s.id
-      LEFT JOIN transactions t ON p.transaction_id = t.id
-      WHERE p.id = ?
-    `).get(id);
+    const { data, error } = await supabase
+      .from('payments')
+      .select(`
+        id, tutar, odeme_tarihi, odeme_yontemi, makbuz_numarasi, notlar, olusturma_tarihi, guncelleme_tarihi,
+        aidat_id,
+        student_fees!payments_aidat_id_fkey(
+          id, aciklama, tutar, son_odeme_tarihi, durum,
+          ogrenci_id,
+          students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube)
+        )
+      `)
+      .eq('id', id)
+      .maybeSingle();
 
-    if (!payment) {
+    if (error) throw error;
+
+    if (!data) {
       return res.status(404).json({
         success: false,
         message: 'Ödeme bulunamadı'
@@ -358,7 +238,27 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: payment
+      data: {
+        id: data.id,
+        amount: data.tutar,
+        payment_date: data.odeme_tarihi,
+        payment_method: data.odeme_yontemi,
+        receipt_number: data.makbuz_numarasi,
+        notes: data.notlar,
+        created_at: data.olusturma_tarihi,
+        updated_at: data.guncelleme_tarihi,
+        fee_id: data.aidat_id,
+        fee_description: data.student_fees?.aciklama,
+        fee_amount: data.student_fees?.tutar,
+        fee_due_date: data.student_fees?.son_odeme_tarihi,
+        fee_status: data.student_fees?.durum,
+        student_id: data.student_fees?.ogrenci_id,
+        first_name: data.student_fees?.students?.ad,
+        last_name: data.student_fees?.students?.soyad,
+        student_number: data.student_fees?.students?.ogrenci_numarasi,
+        class_name: data.student_fees?.students?.sinif,
+        section: data.student_fees?.students?.sube
+      }
     });
 
   } catch (error) {
@@ -371,150 +271,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Ödeme güncelle (PUT /:id)
-router.put('/:id', async (req, res) => {
-  try {
-    const db = getDatabase();
-    const { id } = req.params;
-    const { amount, payment_date, payment_method, receipt_number, notes } = req.body;
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir ödeme ID belirtmelisiniz'
-      });
-    }
-
-    // Mevcut ödeme kontrolü
-    const existingPayment = db.prepare(`
-      SELECT 
-        p.*,
-        sf.amount as fee_amount,
-        COALESCE(SUM(other_p.amount), 0) as other_payments
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      LEFT JOIN payments other_p ON sf.id = other_p.fee_id AND other_p.id != p.id
-      WHERE p.id = ?
-      GROUP BY p.id
-    `).get(id);
-
-    if (!existingPayment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Güncellenecek ödeme bulunamadı'
-      });
-    }
-
-    // Validasyon
-    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir ödeme tutarı belirtmelisiniz'
-      });
-    }
-
-    if (!payment_date || !/^\d{4}-\d{2}-\d{2}$/.test(payment_date)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir ödeme tarihi belirtmelisiniz (YYYY-MM-DD)'
-      });
-    }
-
-    if (!payment_method || !['cash', 'bank_transfer', 'credit_card', 'check'].includes(payment_method)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir ödeme yöntemi seçmelisiniz'
-      });
-    }
-
-    // Tutar kontrolü (diğer ödemeler + yeni tutar <= aidat tutarı)
-    const totalPayments = existingPayment.other_payments + parseFloat(amount);
-    if (totalPayments > existingPayment.fee_amount) {
-      return res.status(400).json({
-        success: false,
-        message: `Toplam ödeme aidat tutarını aşamaz. Maksimum: ${existingPayment.fee_amount - existingPayment.other_payments} TL`
-      });
-    }
-
-    // Transaction başlat
-    const transaction = db.transaction(() => {
-      // Ödemeyi güncelle
-      const updateStmt = db.prepare(`
-        UPDATE payments 
-        SET amount = ?, payment_date = ?, payment_method = ?, receipt_number = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `);
-
-      updateStmt.run(
-        parseFloat(amount),
-        payment_date,
-        payment_method,
-        receipt_number || null,
-        notes || null,
-        id
-      );
-
-      // İlişkili transaction'ı güncelle (eğer varsa)
-      if (existingPayment.transaction_id) {
-        db.prepare(`
-          UPDATE transactions 
-          SET amount = ?, transaction_date = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `).run(parseFloat(amount), payment_date, existingPayment.transaction_id);
-      }
-
-      // Aidat durumunu güncelle
-      const newStatus = totalPayments >= existingPayment.fee_amount ? 'paid' : 'pending';
-      db.prepare(`
-        UPDATE student_fees 
-        SET status = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ?
-      `).run(newStatus, existingPayment.fee_id);
-
-      return { newStatus, totalPaid: totalPayments };
-    });
-
-    const result = transaction();
-
-    // Güncellenmiş ödemeyi getir
-    const updatedPayment = db.prepare(`
-      SELECT 
-        p.*,
-        sf.description as fee_description,
-        s.first_name,
-        s.last_name,
-        s.student_number,
-        s.class_name
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      INNER JOIN students s ON sf.student_id = s.id
-      WHERE p.id = ?
-    `).get(id);
-
-    res.json({
-      success: true,
-      message: 'Ödeme başarıyla güncellendi',
-      data: {
-        ...updatedPayment,
-        fee_status: result.newStatus,
-        total_paid: result.totalPaid
-      }
-    });
-
-  } catch (error) {
-    console.error('Ödeme güncelleme hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ödeme güncellenirken bir hata oluştu',
-      error: error.message
-    });
-  }
-});
-
 // Ödeme sil (DELETE /:id)
 router.delete('/:id', async (req, res) => {
   try {
-    const db = getDatabase();
     const { id } = req.params;
 
     if (isNaN(id)) {
@@ -524,62 +283,55 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    // Mevcut ödeme kontrolü
-    const existingPayment = db.prepare(`
-      SELECT 
-        p.*,
-        sf.amount as fee_amount,
-        COALESCE(SUM(other_p.amount), 0) as other_payments
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      LEFT JOIN payments other_p ON sf.id = other_p.fee_id AND other_p.id != p.id
-      WHERE p.id = ?
-      GROUP BY p.id
-    `).get(id);
+    // Get payment details before deletion
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('aidat_id, tutar')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (!existingPayment) {
+    if (!payment) {
       return res.status(404).json({
         success: false,
         message: 'Silinecek ödeme bulunamadı'
       });
     }
 
-    // Transaction başlat
-    const transaction = db.transaction(() => {
-      // İlişkili transaction'ı sil (eğer varsa)
-      if (existingPayment.transaction_id) {
-        db.prepare('DELETE FROM transactions WHERE id = ?').run(existingPayment.transaction_id);
-      }
+    // Delete payment
+    const { error } = await supabase
+      .from('payments')
+      .delete()
+      .eq('id', id);
 
-      // Ödemeyi sil
-      db.prepare('DELETE FROM payments WHERE id = ?').run(id);
+    if (error) throw error;
 
-      // Aidat durumunu güncelle
-      const remainingAmount = existingPayment.other_payments;
-      const newStatus = remainingAmount >= existingPayment.fee_amount ? 'paid' : 
-                       remainingAmount > 0 ? 'pending' : 'pending';
-      
-      db.prepare(`
-        UPDATE student_fees 
-        SET status = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ?
-      `).run(newStatus, existingPayment.fee_id);
+    // Update fee status
+    const { data: remainingPayments } = await supabase
+      .from('payments')
+      .select('tutar')
+      .eq('aidat_id', payment.aidat_id);
+    
+    const { data: fee } = await supabase
+      .from('student_fees')
+      .select('tutar')
+      .eq('id', payment.aidat_id)
+      .single();
 
-      return { newStatus, remainingPaid: remainingAmount };
-    });
+    const totalPaid = remainingPayments?.reduce((sum, p) => sum + parseFloat(p.tutar), 0) || 0;
+    const newStatus = totalPaid >= parseFloat(fee.tutar) ? 'paid' : 'pending';
 
-    const result = transaction();
+    await supabase
+      .from('student_fees')
+      .update({ 
+        durum: newStatus,
+        guncelleme_tarihi: new Date().toISOString()
+      })
+      .eq('id', payment.aidat_id);
 
     res.json({
       success: true,
       message: 'Ödeme başarıyla silindi',
-      data: {
-        deletedId: parseInt(id),
-        fee_id: existingPayment.fee_id,
-        new_status: result.newStatus,
-        remaining_paid: result.remainingPaid,
-        transaction_deleted: !!existingPayment.transaction_id
-      }
+      data: { deletedId: parseInt(id) }
     });
 
   } catch (error) {
@@ -587,146 +339,6 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ödeme silinirken bir hata oluştu',
-      error: error.message
-    });
-  }
-});
-
-// Aidata göre ödeme özeti (GET /by-fee/:fee_id)
-router.get('/by-fee/:fee_id', async (req, res) => {
-  try {
-    const db = getDatabase();
-    const { fee_id } = req.params;
-
-    if (isNaN(fee_id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Geçerli bir aidat ID belirtmelisiniz'
-      });
-    }
-
-    // Aidat bilgisi
-    const fee = db.prepare(`
-      SELECT 
-        sf.*,
-        s.first_name,
-        s.last_name,
-        s.student_number,
-        s.class_name,
-        s.section
-      FROM student_fees sf
-      INNER JOIN students s ON sf.student_id = s.id
-      WHERE sf.id = ?
-    `).get(fee_id);
-
-    if (!fee) {
-      return res.status(404).json({
-        success: false,
-        message: 'Aidat bulunamadı'
-      });
-    }
-
-    // Ödemeler
-    const payments = db.prepare(`
-      SELECT 
-        p.*,
-        t.description as transaction_description
-      FROM payments p
-      LEFT JOIN transactions t ON p.transaction_id = t.id
-      WHERE p.fee_id = ?
-      ORDER BY p.payment_date DESC
-    `).all(fee_id);
-
-    // Özet hesaplama
-    const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
-    const remainingAmount = fee.amount - totalPaid;
-    const isFullyPaid = remainingAmount <= 0;
-
-    res.json({
-      success: true,
-      data: {
-        fee_info: fee,
-        payments: payments,
-        summary: {
-          total_amount: fee.amount,
-          total_paid: totalPaid,
-          remaining_amount: remainingAmount,
-          is_fully_paid: isFullyPaid,
-          payment_count: payments.length
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Aidat ödeme özeti hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Aidat ödeme özeti alınırken bir hata oluştu',
-      error: error.message
-    });
-  }
-});
-
-// Ödeme istatistikleri (GET /stats/summary)
-router.get('/stats/summary', async (req, res) => {
-  try {
-    const db = getDatabase();
-    const { month, payment_method, class_name } = req.query;
-
-    let whereClause = '';
-    const params = [];
-
-    if (month) {
-      whereClause += ' AND strftime("%Y-%m", p.payment_date) = ?';
-      params.push(month);
-    }
-
-    if (payment_method && ['cash', 'bank_transfer', 'credit_card', 'check'].includes(payment_method)) {
-      whereClause += ' AND p.payment_method = ?';
-      params.push(payment_method);
-    }
-
-    if (class_name) {
-      whereClause += ' AND s.class_name = ?';
-      params.push(class_name);
-    }
-
-    const stats = db.prepare(`
-      SELECT 
-        p.payment_method,
-        COUNT(*) as payment_count,
-        ROUND(SUM(p.amount), 2) as total_amount,
-        ROUND(AVG(p.amount), 2) as average_amount,
-        MIN(p.payment_date) as earliest_payment,
-        MAX(p.payment_date) as latest_payment
-      FROM payments p
-      INNER JOIN student_fees sf ON p.fee_id = sf.id
-      INNER JOIN students s ON sf.student_id = s.id
-      WHERE 1=1 ${whereClause}
-      GROUP BY p.payment_method
-    `).all(...params);
-
-    // Toplam hesaplama
-    const totalPayments = stats.reduce((sum, stat) => sum + stat.payment_count, 0);
-    const totalAmount = stats.reduce((sum, stat) => sum + stat.total_amount, 0);
-
-    res.json({
-      success: true,
-      data: {
-        by_method: stats,
-        totals: {
-          payment_count: totalPayments,
-          total_amount: Math.round(totalAmount * 100) / 100,
-          average_amount: totalPayments > 0 ? Math.round((totalAmount / totalPayments) * 100) / 100 : 0
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Ödeme istatistikleri hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ödeme istatistikleri hesaplanırken bir hata oluştu',
       error: error.message
     });
   }

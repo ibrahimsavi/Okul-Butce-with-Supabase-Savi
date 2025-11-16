@@ -158,11 +158,14 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Success - redirect to home
+                    // Success - store user info and redirect
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
                     submitText.innerHTML = '<i class="fas fa-check mr-2"></i>Başarılı! Yönlendiriliyor...';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 500);
+                    
+                    // Force redirect immediately
+                    window.location.replace('/');
                 } else {
                     // Show error
                     errorText.textContent = data.message || 'Giriş başarısız';
@@ -184,14 +187,26 @@
         });
 
         // Check if already logged in
-        fetch('/api/auth/session')
-            .then(res => res.json())
-            .then(data => {
-                if (data.authenticated) {
-                    window.location.href = '/';
-                }
-            })
-            .catch(err => console.error('Session check error:', err));
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        if (isLoggedIn === 'true') {
+            // Double-check with server
+            fetch('/api/auth/session')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        window.location.replace('/');
+                    } else {
+                        // Clear invalid login state
+                        localStorage.removeItem('isLoggedIn');
+                        localStorage.removeItem('user');
+                    }
+                })
+                .catch(err => {
+                    console.error('Session check error:', err);
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('user');
+                });
+        }
     </script>
 </body>
 </html>

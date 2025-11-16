@@ -341,7 +341,7 @@
 
     <script src="dashboard.js"></script>
     <script>
-        // Logout functionality
+        // Logout handler
         async function handleLogout() {
             try {
                 const response = await fetch('/api/auth/logout', {
@@ -349,13 +349,47 @@
                 });
                 const data = await response.json();
                 if (data.success) {
+                    // Clear localStorage
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('user');
                     window.location.href = '/login.html';
                 }
             } catch (error) {
                 console.error('Logout error:', error);
-                alert('Çıkış yapılırken bir hata oluştu');
+                // Clear localStorage even on error
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
             }
         }
+
+        // Check login status on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (isLoggedIn !== 'true') {
+                // Not logged in, redirect to login
+                window.location.replace('/login.html');
+                return;
+            }
+
+            // Verify session with server
+            fetch('/api/auth/session')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.authenticated) {
+                        // Session expired, clear localStorage and redirect
+                        localStorage.removeItem('isLoggedIn');
+                        localStorage.removeItem('user');
+                        window.location.replace('/login.html');
+                    }
+                })
+                .catch(err => {
+                    console.error('Session check error:', err);
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('user');
+                    window.location.replace('/login.html');
+                });
+        });
 
         document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
         document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);

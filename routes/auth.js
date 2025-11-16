@@ -64,6 +64,7 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
             res.json({
                 success: true,
                 message: 'Giriş başarılı',
+                redirect: '/', // Frontend'e yönlendirme için
                 user: {
                     id: user.id,
                     username: user.kullanici_adi,

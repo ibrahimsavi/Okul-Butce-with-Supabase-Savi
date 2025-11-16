@@ -345,7 +345,8 @@
         async function handleLogout() {
             try {
                 const response = await fetch('/api/auth/logout', {
-                    method: 'POST'
+                    method: 'POST',
+                    credentials: 'include'
                 });
                 const data = await response.json();
                 if (data.success) {
@@ -373,7 +374,9 @@
             }
 
             // Verify session with server
-            fetch('/api/auth/session')
+            fetch('/api/auth/session', {
+                credentials: 'include'
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (!data.authenticated) {

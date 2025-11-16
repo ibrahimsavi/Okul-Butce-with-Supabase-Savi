@@ -152,6 +152,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify(formData)
                 });
                 
@@ -190,7 +191,9 @@
         const isLoggedIn = localStorage.getItem('isLoggedIn');
         if (isLoggedIn === 'true') {
             // Double-check with server
-            fetch('/api/auth/session')
+            fetch('/api/auth/session', {
+                credentials: 'include'
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (data.authenticated) {

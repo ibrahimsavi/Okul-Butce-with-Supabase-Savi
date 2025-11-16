@@ -24,12 +24,12 @@ RUN addgroup -g 1001 -S nodejs && \
 # Non-root user'a geç
 USER nodejs
 
-# 3000 portunu aç
-EXPOSE 3000
+# 9876 portunu aç
+EXPOSE 9876
 
 # Health check ekle
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}")"
+  CMD node -e "require('http').get('http://localhost:9876/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Sunucuyu başlat
 CMD ["node", "server.js"]

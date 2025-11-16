@@ -21,6 +21,9 @@ const { requireAuth } = require('./middleware/auth');
 const app = express();
 const PORT = parseInt(process.env.PORT) || 9876;
 
+// Trust proxy (Coolify/Nginx arkasında çalıştığımız için gerekli)
+app.set('trust proxy', 1);
+
 // Middleware'ler
 app.use(cors());
 app.use(express.json());
@@ -37,6 +40,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));

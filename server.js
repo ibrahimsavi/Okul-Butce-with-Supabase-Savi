@@ -21,11 +21,14 @@ const { requireAuth } = require('./middleware/auth');
 const app = express();
 const PORT = parseInt(process.env.PORT) || 9876;
 
-// Trust proxy (Coolify/Nginx arkasında çalıştığımız için gerekli)
-app.set('trust proxy', 1);
+// Trust proxy (Cloudflare Tunnel + Coolify/Nginx arkasında çalıştığımız için gerekli)
+app.set('trust proxy', true);
 
 // Middleware'ler
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -37,10 +40,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'savi-butce-secret-key-2025',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Cloudflare Tunnel için gerekli
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'none', // Cloudflare Tunnel için 'none' olmalı
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));

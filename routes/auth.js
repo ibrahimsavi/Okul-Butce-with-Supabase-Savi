@@ -51,14 +51,25 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
         req.session.username = user.kullanici_adi;
         req.session.fullName = user.tam_ad;
 
-        res.json({
-            success: true,
-            message: 'Giriş başarılı',
-            user: {
-                id: user.id,
-                username: user.kullanici_adi,
-                fullName: user.tam_ad
+        // Save session explicitly
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Oturum kaydedilemedi'
+                });
             }
+
+            res.json({
+                success: true,
+                message: 'Giriş başarılı',
+                user: {
+                    id: user.id,
+                    username: user.kullanici_adi,
+                    fullName: user.tam_ad
+                }
+            });
         });
     } catch (error) {
         console.error('❌ Login error:', error);

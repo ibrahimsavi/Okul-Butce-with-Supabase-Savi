@@ -20,6 +20,8 @@ const { requireAuth } = require('./middleware/auth');
 // Express uygulamasını oluştur
 const app = express();
 const PORT = parseInt(process.env.PORT) || 9876;
+const SESSION_COOKIE_SECURE = (process.env.SESSION_COOKIE_SECURE || 'false').toLowerCase() === 'true';
+const SESSION_COOKIE_SAMESITE = process.env.SESSION_COOKIE_SAMESITE || 'lax';
 
 // Trust proxy (Cloudflare Tunnel + Coolify/Nginx arkasında çalıştığımız için gerekli)
 app.set('trust proxy', true);
@@ -42,9 +44,9 @@ app.use(session({
   saveUninitialized: false,
   proxy: true, // Cloudflare Tunnel için gerekli
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: SESSION_COOKIE_SECURE,
     httpOnly: true,
-    sameSite: 'none', // Cloudflare Tunnel için 'none' olmalı
+    sameSite: SESSION_COOKIE_SAMESITE,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));

@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
 const cookieParser = require('cookie-parser');
 const { initializeDatabase } = require('./database');
 
@@ -27,8 +29,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Session configuration
+// PostgreSQL connection pool for session store
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL || 
+    `postgresql://postgres:${process.env.SUPABASE_SERVICE_KEY}@${new URL(process.env.SUPABASE_URL).hostname}:5432/postgres`,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Session configuration with PostgreSQL store
 app.use(session({
+  store: new pgSession({
+    pool: pgPool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || 'savi-butce-secret-key-2025',
   resave: false,
   saveUninitialized: false,

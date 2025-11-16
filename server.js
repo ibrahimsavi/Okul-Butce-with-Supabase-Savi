@@ -21,7 +21,7 @@ const { requireAuth } = require('./middleware/auth');
 
 // Express uygulamasını oluştur
 const app = express();
-const PORT = parseInt(process.env.PORT) || 9876;
+const PORT = parseInt(process.env.PORT) || 3000;
 
 // Middleware'ler
 app.use(cors());

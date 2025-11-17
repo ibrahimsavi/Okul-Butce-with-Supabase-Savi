@@ -144,7 +144,7 @@ function displayUsers(users) {
                 ${user.kullanici_adi}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                ${user.ad} ${user.soyad}
+                ${user.tam_ad}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 ${user.eposta || '-'}
@@ -342,8 +342,7 @@ async function editUser(userId) {
                 document.getElementById('userModalTitle').textContent = 'Kullanıcı Düzenle';
                 document.getElementById('userId').value = user.id;
                 document.getElementById('username').value = user.kullanici_adi;
-                document.getElementById('firstName').value = user.ad;
-                document.getElementById('lastName').value = user.soyad;
+                document.getElementById('firstName').value = user.tam_ad;
                 document.getElementById('email').value = user.eposta || '';
                 document.getElementById('roleId').value = user.roles?.id || '';
                 document.getElementById('aktif').checked = user.aktif;
@@ -366,8 +365,7 @@ async function handleUserSubmit(e) {
     const userId = document.getElementById('userId').value;
     const formData = {
         kullanici_adi: document.getElementById('username').value.trim(),
-        ad: document.getElementById('firstName').value.trim(),
-        soyad: document.getElementById('lastName').value.trim(),
+        tam_ad: document.getElementById('firstName').value.trim(),
         eposta: document.getElementById('email').value.trim() || null,
         rol_id: parseInt(document.getElementById('roleId').value),
         aktif: document.getElementById('aktif').checked

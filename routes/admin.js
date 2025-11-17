@@ -16,8 +16,7 @@ router.get('/users', async (req, res) => {
             .select(`
                 id,
                 kullanici_adi,
-                ad,
-                soyad,
+                tam_ad,
                 eposta,
                 aktif,
                 son_giris,
@@ -38,13 +37,13 @@ router.get('/users', async (req, res) => {
 // 2. Yeni kullanıcı ekle
 router.post('/users', async (req, res) => {
     try {
-        const { kullanici_adi, sifre, ad, soyad, eposta, rol_id, aktif = true } = req.body;
+        const { kullanici_adi, sifre, tam_ad, eposta, rol_id, aktif = true } = req.body;
 
         // Validasyon
-        if (!kullanici_adi || !sifre || !ad || !soyad || !rol_id) {
+        if (!kullanici_adi || !sifre || !tam_ad || !rol_id) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Kullanıcı adı, şifre, ad, soyad ve rol zorunludur' 
+                message: 'Kullanıcı adı, şifre, tam ad ve rol zorunludur' 
             });
         }
 
@@ -71,8 +70,7 @@ router.post('/users', async (req, res) => {
             .insert({
                 kullanici_adi,
                 sifre_hash,
-                ad,
-                soyad,
+                tam_ad,
                 eposta,
                 rol_id,
                 aktif
@@ -80,8 +78,7 @@ router.post('/users', async (req, res) => {
             .select(`
                 id,
                 kullanici_adi,
-                ad,
-                soyad,
+                tam_ad,
                 eposta,
                 aktif,
                 olusturma_tarihi,
@@ -102,7 +99,7 @@ router.post('/users', async (req, res) => {
 router.put('/users/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { kullanici_adi, ad, soyad, eposta, rol_id, aktif } = req.body;
+        const { kullanici_adi, tam_ad, eposta, rol_id, aktif } = req.body;
 
         // Kendi hesabını pasif edemez
         if (req.session.userId === parseInt(id) && aktif === false) {
@@ -114,8 +111,7 @@ router.put('/users/:id', async (req, res) => {
 
         const updateData = {};
         if (kullanici_adi) updateData.kullanici_adi = kullanici_adi;
-        if (ad) updateData.ad = ad;
-        if (soyad) updateData.soyad = soyad;
+        if (tam_ad) updateData.tam_ad = tam_ad;
         if (eposta !== undefined) updateData.eposta = eposta;
         if (rol_id) updateData.rol_id = rol_id;
         if (aktif !== undefined) updateData.aktif = aktif;

@@ -29,13 +29,22 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     UNIQUE(rol_id, izin_id)
 );
 
--- 4. Users tablosunu güncelle (eğer users tablosu yoksa oluştur)
+-- 4. Users tablosunu güncelle
+-- Mevcut users tablosuna rol_id kolonu ekle (eğer yoksa)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='users' AND column_name='rol_id') THEN
+        ALTER TABLE users ADD COLUMN rol_id BIGINT REFERENCES roles(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Eğer users tablosu hiç yoksa oluştur
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     kullanici_adi VARCHAR(50) NOT NULL UNIQUE,
-    sifre_hash VARCHAR(255) NOT NULL,
-    ad VARCHAR(100) NOT NULL,
-    soyad VARCHAR(100) NOT NULL,
+    sifre_hash TEXT NOT NULL,
+    tam_ad VARCHAR(100) NOT NULL,
     eposta VARCHAR(255),
     rol_id BIGINT REFERENCES roles(id) ON DELETE SET NULL,
     aktif BOOLEAN NOT NULL DEFAULT true,
@@ -155,20 +164,22 @@ AND p.izin_adi IN (
 )
 ON CONFLICT (rol_id, izin_id) DO NOTHING;
 
--- 10. Varsayılan admin kullanıcısı oluştur (şifre: admin123)
+-- 10. Varsayılan admin kullanıcısı oluştur veya güncelle (şifre: admin123)
 -- Şifre hash'i: bcrypt ile hashlenen 'admin123'
-INSERT INTO users (kullanici_adi, sifre_hash, ad, soyad, eposta, rol_id, aktif)
+INSERT INTO users (kullanici_adi, sifre_hash, tam_ad, eposta, rol_id, aktif)
 SELECT 
     'admin',
     '$2a$10$rF8mVZ4cqGqL5ZJKzJZGKeSq7X9xM9qOYzZc9aZzjJQV9X5xKqvpO', -- admin123
-    'Sistem',
-    'Yöneticisi',
+    'Sistem Yöneticisi',
     'admin@example.com',
     r.id,
     true
 FROM roles r
 WHERE r.rol_adi = 'admin'
-ON CONFLICT (kullanici_adi) DO NOTHING;
+ON CONFLICT (kullanici_adi) 
+DO UPDATE SET 
+    rol_id = EXCLUDED.rol_id,
+    guncelleme_tarihi = NOW();
 
 COMMIT;
 

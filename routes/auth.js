@@ -16,10 +16,13 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
             });
         }
 
-        // Get user from database
+        // Get user from database with role
         const { data: user, error } = await supabase
             .from('users')
-            .select('*')
+            .select(`
+                *,
+                roles!users_rol_id_fkey(id, rol_adi, aciklama)
+            `)
             .eq('kullanici_adi', username)
             .eq('aktif', true)
             .single();
@@ -49,7 +52,9 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
         // Create session
         req.session.userId = user.id;
         req.session.username = user.kullanici_adi;
-        req.session.fullName = user.tam_ad;
+        req.session.fullName = `${user.ad} ${user.soyad}`;
+        req.session.role = user.roles ? user.roles.rol_adi : null;
+        req.session.roleId = user.rol_id;
 
         // Save session explicitly
         req.session.save((err) => {
@@ -68,7 +73,9 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
                 user: {
                     id: user.id,
                     username: user.kullanici_adi,
-                    fullName: user.tam_ad
+                    fullName: `${user.ad} ${user.soyad}`,
+                    role: user.roles ? user.roles.rol_adi : null,
+                    roleDescription: user.roles ? user.roles.aciklama : null
                 }
             });
         });
@@ -107,7 +114,9 @@ router.get('/session', (req, res) => {
             user: {
                 id: req.session.userId,
                 username: req.session.username,
-                fullName: req.session.fullName
+                fullName: req.session.fullName,
+                role: req.session.role,
+                roleId: req.session.roleId
             }
         });
     } else {

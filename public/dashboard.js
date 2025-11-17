@@ -43,6 +43,9 @@ class Dashboard {
     // Tüm başlangıç verilerini yükle
     async loadInitialData() {
         try {
+            // Kullanıcı rolünü kontrol et ve admin linkini göster
+            await this.checkUserRole();
+            
             await Promise.all([
                 this.loadCategories(),
                 this.loadStatistics(),
@@ -523,6 +526,22 @@ class Dashboard {
                 }
             }, 300);
         }, 5000);
+    }
+
+    // Kullanıcı rolünü kontrol et
+    async checkUserRole() {
+        try {
+            const response = await fetch('/api/auth/session', { credentials: 'include' });
+            const data = await response.json();
+            
+            if (data.authenticated && data.user.role === 'admin') {
+                // Admin linklerini göster
+                document.getElementById('adminLink')?.classList.remove('hidden');
+                document.getElementById('adminLinkMobile')?.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Rol kontrolü hatası:', error);
+        }
     }
 }
 

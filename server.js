@@ -13,6 +13,7 @@ const feesRouter = require('./routes/fees');
 const paymentsRouter = require('./routes/payments');
 const reportsRouter = require('./routes/reports');
 const authRouter = require('./routes/auth');
+const adminRouter = require('./routes/admin');
 
 // Middleware'ları import et
 const { requireAuth } = require('./middleware/auth');
@@ -90,6 +91,7 @@ app.use('/api/students', studentsRouter);
 app.use('/api/student-fees', feesRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/admin', adminRouter);
 
 // Hata yakalama middleware
 app.use((err, req, res, next) => {

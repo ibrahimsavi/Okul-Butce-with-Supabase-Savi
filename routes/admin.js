@@ -124,8 +124,7 @@ router.put('/users/:id', async (req, res) => {
             .select(`
                 id,
                 kullanici_adi,
-                ad,
-                soyad,
+                tam_ad,
                 eposta,
                 aktif,
                 olusturma_tarihi,

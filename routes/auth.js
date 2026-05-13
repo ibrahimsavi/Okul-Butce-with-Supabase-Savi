@@ -52,7 +52,7 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
         // Create session
         req.session.userId = user.id;
         req.session.username = user.kullanici_adi;
-        req.session.fullName = `${user.ad} ${user.soyad}`;
+        req.session.fullName = user.tam_ad;
         req.session.role = user.roles ? user.roles.rol_adi : null;
         req.session.roleId = user.rol_id;
 
@@ -73,7 +73,7 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
                 user: {
                     id: user.id,
                     username: user.kullanici_adi,
-                    fullName: `${user.ad} ${user.soyad}`,
+                    fullName: user.tam_ad,
                     role: user.roles ? user.roles.rol_adi : null,
                     roleDescription: user.roles ? user.roles.aciklama : null
                 }

@@ -169,7 +169,7 @@ ON CONFLICT (rol_id, izin_id) DO NOTHING;
 INSERT INTO users (kullanici_adi, sifre_hash, tam_ad, eposta, rol_id, aktif)
 SELECT 
     'admin',
-    '$2a$10$rF8mVZ4cqGqL5ZJKzJZGKeSq7X9xM9qOYzZc9aZzjJQV9X5xKqvpO', -- admin123
+    '$2b$10$b0RP1yWK9C8yYTcBHLn13uRA29OvFDD5D2lGAcLbEy7HtA814qu4G', -- admin123
     'Sistem Yöneticisi',
     'admin@example.com',
     r.id,

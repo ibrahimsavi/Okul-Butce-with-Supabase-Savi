@@ -188,6 +188,91 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Sınıf/şube istatistikleri (/:id'den ÖNCE tanımlanmalı, yoksa 'stats' id olarak yakalanır)
+router.get('/stats/classes', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('sinif, sube')
+      .order('sinif')
+      .order('sube');
+
+    if (error) throw error;
+
+    // Grup sayımı
+    const classBreakdown = {};
+    data.forEach(student => {
+      const key = `${student.sinif}-${student.sube || 'N/A'}`;
+      classBreakdown[key] = (classBreakdown[key] || 0) + 1;
+    });
+
+    const classStats = Object.entries(classBreakdown).map(([key, count]) => {
+      const [className, section] = key.split('-');
+      return {
+        class_name: className,
+        section: section === 'N/A' ? null : section,
+        student_count: count
+      };
+    });
+
+    const { count: totalStudents } = await supabase
+      .from('students')
+      .select('*', { count: 'exact', head: true });
+
+    res.json({
+      success: true,
+      data: {
+        class_breakdown: classStats,
+        total_students: totalStudents,
+        total_classes: classStats.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Sınıf istatistikleri hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sınıf istatistikleri hesaplanırken bir hata oluştu',
+      error: error.message
+    });
+  }
+});
+
+// Sınıf listesini getir - dropdown için (/:id'den ÖNCE tanımlanmalı)
+router.get('/meta/classes', async (req, res) => {
+  try {
+    const { data: classes } = await supabase
+      .from('students')
+      .select('sinif')
+      .order('sinif');
+
+    const { data: sections } = await supabase
+      .from('students')
+      .select('sube')
+      .not('sube', 'is', null)
+      .order('sube');
+
+    const uniqueClasses = [...new Set(classes.map(c => c.sinif))];
+    const uniqueSections = [...new Set(sections.map(s => s.sube))];
+
+    res.json({
+      success: true,
+      data: {
+        classes: uniqueClasses,
+        sections: uniqueSections
+      }
+    });
+
+  } catch (error) {
+    console.error('Sınıf meta verisi hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Sınıf verileri alınırken bir hata oluştu',
+      error: error.message
+    });
+  }
+});
+
 // Tekil öğrenci getir (GET /:id)
 router.get('/:id', async (req, res) => {
   try {
@@ -406,91 +491,6 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenci silinirken bir hata oluştu',
-      error: error.message
-    });
-  }
-});
-
-// Sınıf/şube istatistikleri
-router.get('/stats/classes', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('students')
-      .select('sinif, sube')
-      .order('sinif')
-      .order('sube');
-
-    if (error) throw error;
-
-    // Grup sayımı
-    const classBreakdown = {};
-    data.forEach(student => {
-      const key = `${student.sinif}-${student.sube || 'N/A'}`;
-      classBreakdown[key] = (classBreakdown[key] || 0) + 1;
-    });
-
-    const classStats = Object.entries(classBreakdown).map(([key, count]) => {
-      const [className, section] = key.split('-');
-      return {
-        class_name: className,
-        section: section === 'N/A' ? null : section,
-        student_count: count
-      };
-    });
-
-    const { count: totalStudents } = await supabase
-      .from('students')
-      .select('*', { count: 'exact', head: true });
-
-    res.json({
-      success: true,
-      data: {
-        class_breakdown: classStats,
-        total_students: totalStudents,
-        total_classes: classStats.length
-      }
-    });
-
-  } catch (error) {
-    console.error('Sınıf istatistikleri hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Sınıf istatistikleri hesaplanırken bir hata oluştu',
-      error: error.message
-    });
-  }
-});
-
-// Sınıf listesini getir (dropdown için)
-router.get('/meta/classes', async (req, res) => {
-  try {
-    const { data: classes } = await supabase
-      .from('students')
-      .select('sinif')
-      .order('sinif');
-
-    const { data: sections } = await supabase
-      .from('students')
-      .select('sube')
-      .not('sube', 'is', null)
-      .order('sube');
-
-    const uniqueClasses = [...new Set(classes.map(c => c.sinif))];
-    const uniqueSections = [...new Set(sections.map(s => s.sube))];
-
-    res.json({
-      success: true,
-      data: {
-        classes: uniqueClasses,
-        sections: uniqueSections
-      }
-    });
-
-  } catch (error) {
-    console.error('Sınıf meta verisi hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Sınıf verileri alınırken bir hata oluştu',
       error: error.message
     });
   }

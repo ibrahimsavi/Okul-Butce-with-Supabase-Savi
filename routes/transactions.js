@@ -197,6 +197,73 @@ router.post('/', async (req, res) => {
   }
 });
 
+// İstatistikler endpoint (/:id'den ÖNCE tanımlanmalı, yoksa 'stats' id olarak yakalanır)
+router.get('/stats/summary', async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+
+    let query = supabase
+      .from('transactions')
+      .select('islem_turu, tutar');
+
+    if (start_date && end_date) {
+      query = query.gte('islem_tarihi', start_date).lte('islem_tarihi', end_date);
+    } else if (start_date) {
+      query = query.gte('islem_tarihi', start_date);
+    } else if (end_date) {
+      query = query.lte('islem_tarihi', end_date);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Manuel hesaplama
+    const totals = {
+      gelir: { transaction_count: 0, total_amount: 0, average_amount: 0 },
+      gider: { transaction_count: 0, total_amount: 0, average_amount: 0 }
+    };
+
+    data.forEach(item => {
+      totals[item.islem_turu].transaction_count++;
+      totals[item.islem_turu].total_amount += parseFloat(item.tutar);
+    });
+
+    totals.gelir.average_amount = totals.gelir.transaction_count > 0 
+      ? totals.gelir.total_amount / totals.gelir.transaction_count 
+      : 0;
+    
+    totals.gider.average_amount = totals.gider.transaction_count > 0 
+      ? totals.gider.total_amount / totals.gider.transaction_count 
+      : 0;
+
+    // Yuvarla
+    totals.gelir.total_amount = Math.round(totals.gelir.total_amount * 100) / 100;
+    totals.gider.total_amount = Math.round(totals.gider.total_amount * 100) / 100;
+    totals.gelir.average_amount = Math.round(totals.gelir.average_amount * 100) / 100;
+    totals.gider.average_amount = Math.round(totals.gider.average_amount * 100) / 100;
+
+    const netBalance = totals.gelir.total_amount - totals.gider.total_amount;
+
+    res.json({
+      success: true,
+      data: {
+        ...totals,
+        net_balance: Math.round(netBalance * 100) / 100,
+        period: { start_date: start_date || null, end_date: end_date || null }
+      }
+    });
+
+  } catch (error) {
+    console.error('İstatistik hatası:', error);
+    res.status(500).json({
+      success: false,
+      message: 'İstatistikler hesaplanırken bir hata oluştu',
+      error: error.message
+    });
+  }
+});
+
 // Tekil işlem getir (GET /:id)
 router.get('/:id', async (req, res) => {
   try {
@@ -404,73 +471,6 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İşlem silinirken bir hata oluştu',
-      error: error.message
-    });
-  }
-});
-
-// İstatistikler endpoint
-router.get('/stats/summary', async (req, res) => {
-  try {
-    const { start_date, end_date } = req.query;
-
-    let query = supabase
-      .from('transactions')
-      .select('islem_turu, tutar');
-
-    if (start_date && end_date) {
-      query = query.gte('islem_tarihi', start_date).lte('islem_tarihi', end_date);
-    } else if (start_date) {
-      query = query.gte('islem_tarihi', start_date);
-    } else if (end_date) {
-      query = query.lte('islem_tarihi', end_date);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Manuel hesaplama
-    const totals = {
-      gelir: { transaction_count: 0, total_amount: 0, average_amount: 0 },
-      gider: { transaction_count: 0, total_amount: 0, average_amount: 0 }
-    };
-
-    data.forEach(item => {
-      totals[item.islem_turu].transaction_count++;
-      totals[item.islem_turu].total_amount += parseFloat(item.tutar);
-    });
-
-    totals.gelir.average_amount = totals.gelir.transaction_count > 0 
-      ? totals.gelir.total_amount / totals.gelir.transaction_count 
-      : 0;
-    
-    totals.gider.average_amount = totals.gider.transaction_count > 0 
-      ? totals.gider.total_amount / totals.gider.transaction_count 
-      : 0;
-
-    // Yuvarla
-    totals.gelir.total_amount = Math.round(totals.gelir.total_amount * 100) / 100;
-    totals.gider.total_amount = Math.round(totals.gider.total_amount * 100) / 100;
-    totals.gelir.average_amount = Math.round(totals.gelir.average_amount * 100) / 100;
-    totals.gider.average_amount = Math.round(totals.gider.average_amount * 100) / 100;
-
-    const netBalance = totals.gelir.total_amount - totals.gider.total_amount;
-
-    res.json({
-      success: true,
-      data: {
-        ...totals,
-        net_balance: Math.round(netBalance * 100) / 100,
-        period: { start_date: start_date || null, end_date: end_date || null }
-      }
-    });
-
-  } catch (error) {
-    console.error('İstatistik hatası:', error);
-    res.status(500).json({
-      success: false,
-      message: 'İstatistikler hesaplanırken bir hata oluştu',
       error: error.message
     });
   }

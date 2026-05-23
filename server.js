@@ -46,6 +46,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Cloudflare Tunnel x-forwarded-proto düzeltmesi
+// Cloudflare Tunnel origin'e HTTP üzerinden bağlanır, bu yüzden x-forwarded-proto 'http' gelir.
+// CF-Visitor header'ından gerçek protocol'ü alıp düzeltiyoruz.
+app.use((req, res, next) => {
+  // CF-Visitor header'ı Cloudflare tarafından eklenir: {"scheme":"https"}
+  const cfVisitor = req.headers['cf-visitor'];
+  if (cfVisitor) {
+    try {
+      const visitor = JSON.parse(cfVisitor);
+      if (visitor.scheme === 'https') {
+        req.headers['x-forwarded-proto'] = 'https';
+      }
+    } catch (e) {
+      // JSON parse hatası, devam et
+    }
+  }
+  // CF-Connecting-IP varsa Cloudflare arkasındayız, proto'yu https yap
+  else if (req.headers['cf-connecting-ip']) {
+    req.headers['x-forwarded-proto'] = 'https';
+  }
+  next();
+});
+
 // Session configuration
 // Note: Using MemoryStore for simplicity. For production with multiple instances,
 // consider using Redis or another persistent session store.

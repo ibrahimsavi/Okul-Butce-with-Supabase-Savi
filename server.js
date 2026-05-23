@@ -27,16 +27,6 @@ const SESSION_COOKIE_SAMESITE = process.env.SESSION_COOKIE_SAMESITE || 'lax';
 // Trust proxy (Cloudflare Tunnel + Coolify/Nginx arkasında çalıştığımız için gerekli)
 app.set('trust proxy', true);
 
-console.log('⚙️  Environment config:', {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT,
-    SESSION_COOKIE_SECURE,
-    SESSION_COOKIE_SAMESITE,
-    SUPABASE_URL: process.env.SUPABASE_URL ? '✅ set' : '❌ missing',
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ set' : '❌ missing',
-    SESSION_SECRET: process.env.SESSION_SECRET ? '✅ set' : '❌ missing'
-});
-
 // Middleware'ler
 app.use(cors({
   origin: true,

@@ -57,14 +57,26 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
         req.session.roleId = user.rol_id;
 
         // Save session explicitly
+        console.log('🔐 Session save attempt:', {
+            sessionId: req.sessionID,
+            userId: req.session.userId,
+            cookieSecure: req.session.cookie.secure,
+            cookieSameSite: req.session.cookie.sameSite,
+            protocol: req.protocol,
+            xForwardedProto: req.headers['x-forwarded-proto'],
+            host: req.headers['host']
+        });
+        
         req.session.save((err) => {
             if (err) {
-                console.error('Session save error:', err);
+                console.error('❌ Session save error:', err);
                 return res.status(500).json({
                     success: false,
                     message: 'Oturum kaydedilemedi'
                 });
             }
+
+            console.log('✅ Session saved successfully, sessionID:', req.sessionID);
 
             res.json({
                 success: true,

@@ -1,6 +1,17 @@
 // Authentication Middleware
 
 function requireAuth(req, res, next) {
+    // Debug: log session state for protected routes
+    if (req.path === '/' || req.path === '/index.html') {
+        console.log('🔒 requireAuth check:', {
+            path: req.path,
+            hasSession: !!req.session,
+            userId: req.session?.userId,
+            sessionID: req.sessionID,
+            cookies: req.headers.cookie ? 'present' : 'missing'
+        });
+    }
+    
     if (req.session && req.session.userId) {
         return next();
     }

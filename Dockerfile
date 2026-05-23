@@ -7,8 +7,8 @@ WORKDIR /app
 # package*.json dosyalarını kopyala
 COPY package*.json package-lock.json* ./
 
-# Native modüller için derleme araçları
-RUN apk add --no-cache python3 make g++
+# Native modüller için derleme araçları + curl (healthcheck için)
+RUN apk add --no-cache python3 make g++ curl
 
 # Bağımlılıkları yükle (yalnızca production)
 RUN npm ci --only=production
@@ -27,9 +27,9 @@ USER nodejs
 # 9876 portunu aç
 EXPOSE 9876
 
-# Health check ekle
+# Health check (curl ile - Coolify uyumlu)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:9876/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD curl -f http://127.0.0.1:${PORT:-9876}/health || exit 1
 
 # Sunucuyu başlat
 CMD ["node", "server.js"]

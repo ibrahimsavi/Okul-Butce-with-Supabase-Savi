@@ -2,11 +2,15 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
 const { supabase } = require('../database');
 const { requireAdmin } = require('../middleware/authorization');
 
 // Tüm route'lar admin yetkisi gerektiriyor
-router.use(requireAdmin);
+router.use(requireAdmin, require('../middleware/security').validateInput);
 
 // 1. Tüm kullanıcıları listele
 router.get('/users', async (req, res) => {
@@ -40,10 +44,10 @@ router.post('/users', async (req, res) => {
         const { kullanici_adi, sifre, tam_ad, eposta, rol_id, aktif = true } = req.body;
 
         // Validasyon
-        if (!kullanici_adi || !sifre || !tam_ad || !rol_id) {
+        if (!kullanici_adi || !require('../middleware/security').validPassword(sifre) || !tam_ad || !rol_id) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Kullanıcı adı, şifre, tam ad ve rol zorunludur' 
+                message: 'Kullanıcı adı, tam ad ve rol zorunludur. Şifre en az 12 karakter ve en fazla 72 bayt olmalıdır.'
             });
         }
 
@@ -147,10 +151,10 @@ router.put('/users/:id/password', async (req, res) => {
         const { id } = req.params;
         const { yeni_sifre } = req.body;
 
-        if (!yeni_sifre || yeni_sifre.length < 6) {
+        if (!require('../middleware/security').validPassword(yeni_sifre)) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Şifre en az 6 karakter olmalıdır' 
+                message: 'Şifre en az 12 karakter ve en fazla 72 bayt olmalıdır'
             });
         }
 
@@ -338,3 +342,4 @@ router.get('/stats', async (req, res) => {
 });
 
 module.exports = router;
+

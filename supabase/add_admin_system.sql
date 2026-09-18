@@ -31,14 +31,6 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 
 -- 4. Users tablosunu güncelle
 -- Mevcut users tablosuna rol_id kolonu ekle (eğer yoksa)
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                   WHERE table_name='users' AND column_name='rol_id') THEN
-        ALTER TABLE users ADD COLUMN rol_id BIGINT REFERENCES roles(id) ON DELETE SET NULL;
-    END IF;
-END $$;
-
 -- Eğer users tablosu hiç yoksa oluştur
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
@@ -52,6 +44,15 @@ CREATE TABLE IF NOT EXISTS users (
     olusturma_tarihi TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     guncelleme_tarihi TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='rol_id') THEN
+        ALTER TABLE users ADD COLUMN rol_id BIGINT REFERENCES roles(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
 
 -- 5. Varsayılan rolleri ekle
 INSERT INTO roles (rol_adi, aciklama) VALUES
@@ -164,28 +165,32 @@ AND p.izin_adi IN (
 )
 ON CONFLICT (rol_id, izin_id) DO NOTHING;
 
--- 10. Varsayılan admin kullanıcısı oluştur veya güncelle (şifre: admin123)
--- Şifre hash'i: bcrypt ile hashlenen 'admin123'
-INSERT INTO users (kullanici_adi, sifre_hash, tam_ad, eposta, rol_id, aktif)
-SELECT 
-    'admin',
-    '$2b$10$b0RP1yWK9C8yYTcBHLn13uRA29OvFDD5D2lGAcLbEy7HtA814qu4G', -- admin123
-    'Sistem Yöneticisi',
-    'admin@example.com',
-    r.id,
-    true
-FROM roles r
-WHERE r.rol_adi = 'admin'
-ON CONFLICT (kullanici_adi) 
-DO UPDATE SET 
-    rol_id = EXCLUDED.rol_id,
-    guncelleme_tarihi = NOW();
+-- Create the first administrator with npm run create-admin (see SECURITY.md).
 
 COMMIT;
 
 -- ✅ Admin sistemi kuruldu
--- Varsayılan giriş bilgileri:
--- Kullanıcı Adı: admin
--- Şifre: admin123
 -- 
 -- ⚠️ UYARI: İlk girişten sonra admin şifresini mutlaka değiştirin!
+
+
+-- Server-only access: application sessions are verified by Express, not Supabase Auth.
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM PUBLIC, anon, authenticated;
+-- Run after the existing schema. No business data is deleted.
+BEGIN;
+DO $$
+DECLARE table_name text; policy_record record;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY['users','roles','permissions','role_permissions','categories','students','transactions','student_fees','payments'] LOOP
+    IF to_regclass('public.' || table_name) IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
+      FOR policy_record IN SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = table_name LOOP
+        EXECUTE format('DROP POLICY %I ON public.%I', policy_record.policyname, table_name);
+      END LOOP;
+      EXECUTE format('REVOKE ALL ON TABLE public.%I FROM anon, authenticated', table_name);
+      EXECUTE format('GRANT ALL ON TABLE public.%I TO service_role', table_name);
+    END IF;
+  END LOOP;
+END $$;
+COMMIT;

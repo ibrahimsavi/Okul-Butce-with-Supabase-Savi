@@ -6,7 +6,7 @@ const { supabase } = require('../database');
 // Kullanıcının izinlerini kontrol et
 async function checkPermission(req, res, next, requiredPermission) {
     try {
-        if (!req.session.userId) {
+        if (!req.session?.userId) {
             return res.status(401).json({ success: false, message: 'Oturum açmanız gerekiyor' });
         }
 
@@ -42,7 +42,7 @@ async function checkPermission(req, res, next, requiredPermission) {
             return res.status(500).json({ success: false, message: 'Yetki kontrolü başarısız' });
         }
 
-        const userPermissions = hasPermission.map(rp => rp.permissions.izin_adi);
+        const userPermissions = (hasPermission || []).map(rp => rp.permissions?.izin_adi);
         
         if (userPermissions.includes(requiredPermission)) {
             return next();
@@ -63,7 +63,7 @@ async function checkPermission(req, res, next, requiredPermission) {
 // Rol kontrolü
 async function requireRole(req, res, next, allowedRoles) {
     try {
-        if (!req.session.userId) {
+        if (!req.session?.userId) {
             return res.status(401).json({ success: false, message: 'Oturum açmanız gerekiyor' });
         }
 
@@ -125,3 +125,4 @@ module.exports = {
     checkPermission,
     requireRole
 };
+

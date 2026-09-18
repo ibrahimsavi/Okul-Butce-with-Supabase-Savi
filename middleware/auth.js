@@ -1,30 +1,22 @@
-// Authentication Middleware
+const { supabase } = require('../database');
 
-function requireAuth(req, res, next) {
-    if (req.session && req.session.userId) {
-        return next();
-    }
-    
-    // If it's an API request, send JSON response
-    if (req.path.startsWith('/api/')) {
-        return res.status(401).json({
-            success: false,
-            message: 'Oturum açmanız gerekiyor'
-        });
-    }
-    
-    // Otherwise redirect to login
-    res.redirect('/login.html');
-}
-
-function redirectIfAuthenticated(req, res, next) {
-    if (req.session && req.session.userId) {
-        return res.redirect('/');
+async function requireAuth(req, res, next) {
+  const deny = () => req.path.startsWith('/api/') || req.baseUrl?.startsWith('/api/')
+    ? res.status(401).json({ success: false, message: 'Oturum açmanız gerekiyor' })
+    : res.redirect('/login.html');
+  if (!req.session?.userId) return deny();
+  try {
+    const { data: user, error } = await supabase.from('users')
+      .select('id, aktif, guncelleme_tarihi').eq('id', req.session.userId).single();
+    if (error) return res.status(503).json({ success: false, message: 'Oturum doğrulanamadı' });
+    if (!user?.aktif || req.session.authVersion !== user.guncelleme_tarihi) {
+      return req.session.destroy(() => { res.clearCookie('connect.sid'); deny(); });
     }
     next();
+  } catch (error) { next(error); }
 }
-
-module.exports = {
-    requireAuth,
-    redirectIfAuthenticated
-};
+function redirectIfAuthenticated(req, res, next) {
+  // Reauthentication is allowed and always rotates the session ID.
+  next();
+}
+module.exports = { requireAuth, redirectIfAuthenticated };

@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
         .brand-font {
             font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
             font-weight: 700;
@@ -16,6 +15,9 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
     </style>
+    <link rel="stylesheet" href="/theme.css">
+    <script src="/safe-html.js"></script>
+    <script src="/theme.js" defer></script>
 </head>
 <body class="bg-gray-100">
     <!-- Header -->
@@ -23,7 +25,7 @@
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold brand-font">
                 <i class="fas fa-school mr-2"></i>
-                <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span>
+                <span class="brand-name">Savi Bütçe</span>
             </h1>
             <nav class="hidden md:flex items-center">
                 <a href="/" class="hover:bg-blue-700 px-3 py-2 rounded-md mr-2">Ana Sayfa</a>
@@ -100,10 +102,10 @@
                                 type="password" 
                                 id="new-password" 
                                 required 
-                                minlength="6"
+                                minlength="12"
                                 autocomplete="new-password"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
-                                placeholder="Yeni şifrenizi girin (en az 6 karakter)"
+                                placeholder="Yeni şifrenizi girin (en az 12 karakter)"
                             >
                             <button 
                                 type="button" 
@@ -117,7 +119,7 @@
                             <div id="password-strength" class="text-xs space-y-1">
                                 <div class="flex items-center text-gray-500">
                                     <i class="fas fa-circle text-xs mr-2"></i>
-                                    <span>En az 6 karakter</span>
+                                    <span>En az 12 karakter</span>
                                 </div>
                             </div>
                         </div>
@@ -133,7 +135,7 @@
                                 type="password" 
                                 id="confirm-password" 
                                 required 
-                                minlength="6"
+                                minlength="12"
                                 autocomplete="new-password"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
                                 placeholder="Yeni şifrenizi tekrar girin"
@@ -150,7 +152,7 @@
                     </div>
 
                     <!-- Messages -->
-                    <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    <div id="error-message" role="alert" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                         <i class="fas fa-exclamation-circle mr-2"></i>
                         <span id="error-text"></span>
                     </div>
@@ -187,7 +189,7 @@
                         Güvenli Şifre İpuçları
                     </h3>
                     <ul class="text-sm text-gray-600 space-y-1">
-                        <li><i class="fas fa-check text-green-600 mr-2"></i>En az 6 karakter uzunluğunda olmalı</li>
+                        <li><i class="fas fa-check text-green-600 mr-2"></i>En az 12 karakter uzunluğunda olmalı</li>
                         <li><i class="fas fa-check text-green-600 mr-2"></i>Büyük ve küçük harfler kullanın</li>
                         <li><i class="fas fa-check text-green-600 mr-2"></i>Sayılar ve özel karakterler ekleyin</li>
                         <li><i class="fas fa-check text-green-600 mr-2"></i>Tahmin edilmesi zor bir kombinasyon seçin</li>
@@ -200,8 +202,8 @@
     <!-- Footer -->
     <footer class="bg-gray-800 text-white py-8 mt-16">
         <div class="container mx-auto text-center">
-            <h2 class="text-3xl font-bold brand-font mb-4"><span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span></h2>
-            <p class="text-gray-400">© 2025 <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span> - Tüm hakları saklıdır.</p>
+            <h2 class="text-3xl font-bold brand-font mb-4"><span class="brand-name">Savi Bütçe</span></h2>
+            <p class="text-gray-400">© 2025 <span class="brand-name">Savi Bütçe</span> - Tüm hakları saklıdır.</p>
         </div>
     </footer>
 
@@ -283,8 +285,8 @@
             }
             
             // Validate password length
-            if (newPassword.length < 6) {
-                errorText.textContent = 'Yeni şifre en az 6 karakter olmalıdır';
+            if (newPassword.length < 12) {
+                errorText.textContent = 'Yeni şifre en az 12 karakter olmalıdır';
                 errorMessage.classList.remove('hidden');
                 return;
             }
@@ -364,3 +366,4 @@
     </script>
 </body>
 </html>
+

@@ -141,17 +141,17 @@ function displayUsers(users) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                ${user.kullanici_adi}
+                ${escapeHtml(user.kullanici_adi)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                ${user.tam_ad}
+                ${escapeHtml(user.tam_ad)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${user.eposta || '-'}
+                ${escapeHtml(user.eposta || '-')}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(user.roles?.rol_adi)}">
-                    ${user.roles?.rol_adi || 'Rol Yok'}
+                    ${escapeHtml(user.roles?.rol_adi || 'Rol Yok')}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
@@ -166,14 +166,16 @@ function displayUsers(users) {
                 <button onclick="editUser(${user.id})" class="text-blue-600 hover:text-blue-900">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="changeUserPassword(${user.id}, '${user.kullanici_adi}')" class="text-purple-600 hover:text-purple-900">
+                <button data-password-user="${user.id}" class="text-purple-600 hover:text-purple-900">
                     <i class="fas fa-key"></i>
                 </button>
-                <button onclick="deleteUser(${user.id}, '${user.kullanici_adi}')" class="text-red-600 hover:text-red-900">
+                <button data-delete-user="${user.id}" class="text-red-600 hover:text-red-900">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
         `;
+        tr.querySelector('[data-password-user]').addEventListener('click', () => changeUserPassword(user.id, user.kullanici_adi));
+        tr.querySelector('[data-delete-user]').addEventListener('click', () => deleteUser(user.id, user.kullanici_adi));
         tbody.appendChild(tr);
     });
 }
@@ -199,8 +201,8 @@ function displayRolesList(roles) {
         div.innerHTML = `
             <div class="flex justify-between items-start">
                 <div>
-                    <h4 class="font-semibold text-gray-900">${role.rol_adi}</h4>
-                    <p class="text-sm text-gray-600">${role.aciklama}</p>
+                    <h4 class="font-semibold text-gray-900">${escapeHtml(role.rol_adi)}</h4>
+                    <p class="text-sm text-gray-600">${escapeHtml(role.aciklama)}</p>
                 </div>
                 <i class="fas fa-chevron-right text-gray-400"></i>
             </div>
@@ -247,7 +249,7 @@ function displayRolePermissions(rolePermissions) {
     Object.keys(grouped).forEach(kategori => {
         const categoryDiv = document.createElement('div');
         categoryDiv.className = 'mb-4';
-        categoryDiv.innerHTML = `<h4 class="font-medium text-gray-700 mb-2 capitalize">${kategori}</h4>`;
+        categoryDiv.innerHTML = `<h4 class="font-medium text-gray-700 mb-2 capitalize">${escapeHtml(kategori)}</h4>`;
         
         const permList = document.createElement('div');
         permList.className = 'space-y-1 pl-4';
@@ -265,7 +267,7 @@ function displayRolePermissions(rolePermissions) {
                     class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 >
                 <label for="perm-${perm.id}" class="ml-2 text-gray-700">
-                    ${perm.aciklama || perm.izin_adi}
+                    ${escapeHtml(perm.aciklama || perm.izin_adi)}
                 </label>
             `;
             permList.appendChild(permDiv);
@@ -510,7 +512,7 @@ function showMessage(message, type = 'info') {
     
     messageDiv.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg mb-4 flex items-center justify-between`;
     messageDiv.innerHTML = `
-        <span>${message}</span>
+        <span>${escapeHtml(message)}</span>
         <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
             <i class="fas fa-times"></i>
         </button>
@@ -522,3 +524,4 @@ function showMessage(message, type = 'info') {
         messageDiv.remove();
     }, 5000);
 }
+

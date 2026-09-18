@@ -423,7 +423,7 @@ class ReportsManager {
                 : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Gider</span>';
 
             row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(item.name)}</td>
                 <td class="px-6 py-4 whitespace-nowrap">${typeBadge}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">₺${this.formatNumber(item.amount)}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${item.count}</td>
@@ -529,7 +529,7 @@ class ReportsManager {
         messageDiv.className = `${bgColor} text-white px-4 py-3 rounded-md shadow-lg mb-2 flex items-center transform transition-transform duration-300 translate-x-full`;
         messageDiv.innerHTML = `
             <i class="fas ${icon} mr-2"></i>
-            <span>${message}</span>
+            <span>${escapeHtml(message)}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
             </button>

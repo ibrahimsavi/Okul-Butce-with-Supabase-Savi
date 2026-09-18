@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/*.test.js",
+    "create-admin": "node scripts/create-admin.js"
   },
   "keywords": [
     "budget",
@@ -20,7 +21,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.81.1",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^9.4.3",
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -28,8 +28,14 @@
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
-    "multer": "^1.4.5-lts.1",
-    "pg": "^8.16.3",
-    "xlsx": "^0.18.5"
+    "pg": "^8.16.3"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

@@ -84,7 +84,7 @@ class FeesManager {
 
     async loadStudents() {
         try {
-            const response = await fetch('/api/students');
+            const response = await fetch('/api/students?limit=1000');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -92,6 +92,13 @@ class FeesManager {
             
             if (data.success) {
                 this.students = data.data;
+                while (this.students.length < data.pagination.total) {
+                    const page = await fetch('/api/students?limit=1000&offset=' + this.students.length);
+                    if (!page.ok) throw new Error('Öğrenci listesi tamamlanamadı');
+                    const more = await page.json();
+                    if (!more.data?.length) throw new Error('Öğrenci listesi tamamlanamadı');
+                    this.students.push(...more.data);
+                }
                 this.populateStudentSelects();
                 
                 // Extract unique classes
@@ -236,15 +243,15 @@ class FeesManager {
             <td class="px-6 py-4 whitespace-nowrap">
                 <div>
                     <div class="text-sm font-medium text-gray-900">
-                        ${fee.first_name} ${fee.last_name}
+                        ${escapeHtml(fee.first_name)} ${escapeHtml(fee.last_name)}
                     </div>
                     <div class="text-sm text-gray-500">
-                        ${fee.student_number} - ${fee.class_name}${fee.section}
+                        ${escapeHtml(fee.student_number)} - ${escapeHtml(fee.class_name)}${escapeHtml(fee.section)}
                     </div>
                 </div>
             </td>
             <td class="px-6 py-4">
-                <div class="text-sm text-gray-900">${fee.description}</div>
+                <div class="text-sm text-gray-900">${escapeHtml(fee.description)}</div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900">
@@ -331,6 +338,11 @@ class FeesManager {
     }
 
     showAddFeeModal() {
+        this.editingFeeId = null;
+        document.getElementById('add-fee-form').reset();
+        document.getElementById('student-select').disabled = false;
+        document.querySelector('#add-fee-modal h3').textContent = 'Yeni Aidat Ekle';
+        document.querySelector('#add-fee-form button[type=submit]').textContent = 'Aidat Ekle';
         // Set default due date to next month
         const nextMonth = new Date();
         nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -377,8 +389,8 @@ class FeesManager {
             const div = document.createElement('div');
             div.className = 'flex items-center';
             div.innerHTML = `
-                <input type="checkbox" id="class-${className}" value="${className}" class="mr-2">
-                <label for="class-${className}" class="text-sm text-gray-700">${className}. Sınıf</label>
+                <input type="checkbox" id="class-${escapeHtml(className)}" value="${escapeHtml(className)}" class="mr-2">
+                <label for="class-${escapeHtml(className)}" class="text-sm text-gray-700">${escapeHtml(className)}. Sınıf</label>
             `;
             container.appendChild(div);
         });
@@ -394,7 +406,7 @@ class FeesManager {
             div.innerHTML = `
                 <input type="checkbox" id="student-${student.id}" value="${student.id}" class="mr-2">
                 <label for="student-${student.id}" class="text-sm text-gray-700">
-                    ${student.first_name} ${student.last_name} - ${student.class_name}${student.section}
+                    ${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)} - ${escapeHtml(student.class_name)}${escapeHtml(student.section)}
                 </label>
             `;
             container.appendChild(div);
@@ -445,8 +457,8 @@ class FeesManager {
         };
 
         try {
-            const response = await fetch('/api/student-fees', {
-                method: 'POST',
+            const response = await fetch(this.editingFeeId ? '/api/student-fees/' + this.editingFeeId : '/api/student-fees', {
+                method: this.editingFeeId ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -459,7 +471,7 @@ class FeesManager {
             const data = await response.json();
             
             if (data.success) {
-                this.showNotification('Aidat başarıyla eklendi!', 'success');
+                this.showNotification(this.editingFeeId ? 'Aidat güncellendi' : 'Aidat eklendi', 'success');
                 this.hideModal('add-fee-modal');
                 document.getElementById('add-fee-form').reset();
                 await this.loadFees();
@@ -729,7 +741,7 @@ Oluşturma Tarihi: ${this.formatDateTime(fee.created_at)}`);
         notification.className = `notification ${typeStyles[type]} p-4 rounded-lg shadow-lg mb-4 flex items-center`;
         notification.innerHTML = `
             <i class="${icons[type]} text-lg mr-3"></i>
-            <span class="flex-1">${message}</span>
+            <span class="flex-1">${escapeHtml(message)}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
             </button>
@@ -766,8 +778,21 @@ Oluşturma Tarihi: ${this.formatDateTime(fee.created_at)}`);
     }
 
     async editFee(id) {
-        // TODO: Implement edit functionality
-        this.showNotification('Düzenleme özelliği yakında eklenecek', 'info');
+        try {
+            const response = await fetch('/api/student-fees/' + id);
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Aidat alınamadı');
+            const fee = result.data;
+            this.showAddFeeModal();
+            this.editingFeeId = id;
+            document.querySelector('#add-fee-modal h3').textContent = 'Aidatı Düzenle';
+            document.querySelector('#add-fee-form button[type=submit]').textContent = 'Değişiklikleri Kaydet';
+            document.getElementById('student-select').value = fee.student_id;
+            document.getElementById('student-select').disabled = true;
+            document.getElementById('fee-description').value = fee.description;
+            document.getElementById('fee-amount').value = fee.amount;
+            document.getElementById('fee-due-date').value = fee.due_date;
+        } catch (error) { this.showNotification(error.message, 'error'); }
     }
 }
 

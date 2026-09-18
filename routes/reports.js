@@ -2,6 +2,13 @@ const express = require('express');
 const { supabase } = require('../database');
 const ExcelJS = require('exceljs');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
+const { requirePermission } = require('../middleware/authorization');
+const { validateInput } = require('../middleware/security');
+router.use(validateInput, requirePermission('view_reports'), requirePermission('export_reports'));
 
 // Ping endpoint
 router.get('/ping', (req, res) => {
@@ -9,7 +16,7 @@ router.get('/ping', (req, res) => {
 });
 
 // Mali rapor Excel'e aktar (GET /financial)
-router.get('/financial', async (req, res) => {
+router.get('/financial', requirePermission('view_financial_reports'), async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
 
@@ -136,13 +143,13 @@ router.get('/financial', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Mali rapor oluşturulurken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Öğrenciler Excel'e aktar (GET /students)
-router.get('/students', async (req, res) => {
+router.get('/students', requirePermission('view_student_reports'), async (req, res) => {
   try {
     const { data: students, error } = await supabase
       .from('students')
@@ -195,13 +202,13 @@ router.get('/students', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenci raporu oluşturulurken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Aidatlar Excel'e aktar (GET /fees)
-router.get('/fees', async (req, res) => {
+router.get('/fees', requirePermission('view_financial_reports'), async (req, res) => {
   try {
     const { data: fees, error } = await supabase
       .from('student_fees')
@@ -256,9 +263,10 @@ router.get('/fees', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Aidat raporu oluşturulurken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 module.exports = router;
+

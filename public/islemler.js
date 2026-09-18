@@ -285,10 +285,10 @@ class TransactionManager {
                 </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-sm font-medium text-gray-900">${transaction.category_name || 'Kategori Yok'}</span>
+                <span class="text-sm font-medium text-gray-900">${escapeHtml(transaction.category_name || 'Kategori Yok')}</span>
             </td>
             <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                ${transaction.description}
+                ${escapeHtml(transaction.description)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium ${amountColor}">
                 ${amountPrefix}₺${formattedAmount}
@@ -303,7 +303,7 @@ class TransactionManager {
                         <i class="fas fa-edit"></i>
                     </button>
                     <button 
-                        onclick="transactionManager.showDeleteModal(${transaction.id}, '${transaction.description.replace(/'/g, "\\'")}', '${amountPrefix}₺${formattedAmount}', '${formattedDate}')"
+                        data-delete-transaction="${transaction.id}"
                         class="text-red-600 hover:text-red-900 p-2 rounded-md hover:bg-red-50 transition-colors duration-150"
                         title="Sil"
                     >
@@ -313,6 +313,7 @@ class TransactionManager {
             </td>
         `;
 
+        row.querySelector('[data-delete-transaction]').addEventListener('click', () => this.showDeleteModal(transaction.id, transaction.description, amountPrefix + '₺' + formattedAmount, formattedDate));
         return row;
     }
 
@@ -570,7 +571,7 @@ class TransactionManager {
         messageDiv.className = `${bgColor} text-white px-4 py-3 rounded-md shadow-lg mb-2 flex items-center transform transition-transform duration-300 translate-x-full max-w-md`;
         messageDiv.innerHTML = `
             <i class="fas ${icon} mr-2"></i>
-            <span>${message}</span>
+            <span>${escapeHtml(message)}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
             </button>

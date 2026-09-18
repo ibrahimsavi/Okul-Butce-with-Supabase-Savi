@@ -2,14 +2,16 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { supabase } = require('../database');
-const { redirectIfAuthenticated } = require('../middleware/auth');
+const { redirectIfAuthenticated, requireAuth } = require('../middleware/auth');
+const { loginLimiter, validPassword, validateInput } = require('../middleware/security');
+router.use(validateInput);
 
 // Login endpoint
-router.post('/login', redirectIfAuthenticated, async (req, res) => {
+router.post('/login', loginLimiter, redirectIfAuthenticated, async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        if (!username || !password) {
+        if (typeof username !== 'string' || !username.trim() || username.length > 50 || typeof password !== 'string' || !password || Buffer.byteLength(password) > 72) {
             return res.status(400).json({
                 success: false,
                 message: 'Kullanıcı adı ve şifre gereklidir'
@@ -49,8 +51,11 @@ router.post('/login', redirectIfAuthenticated, async (req, res) => {
             .update({ son_giris: new Date().toISOString() })
             .eq('id', user.id);
 
+        // Regenerate to prevent session fixation after authentication.
+        await new Promise((resolve, reject) => req.session.regenerate(err => err ? reject(err) : resolve()));
         // Create session
         req.session.userId = user.id;
+        req.session.authVersion = user.guncelleme_tarihi;
         req.session.username = user.kullanici_adi;
         req.session.fullName = user.tam_ad;
         req.session.role = user.roles ? user.roles.rol_adi : null;
@@ -106,7 +111,7 @@ router.post('/logout', (req, res) => {
 });
 
 // Check session endpoint
-router.get('/session', (req, res) => {
+router.get('/session', requireAuth, (req, res) => {
     if (req.session && req.session.userId) {
         res.json({
             success: true,
@@ -128,7 +133,7 @@ router.get('/session', (req, res) => {
 });
 
 // Change password endpoint
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', requireAuth, loginLimiter, async (req, res) => {
     try {
         // Check if user is logged in
         if (!req.session || !req.session.userId) {
@@ -140,17 +145,17 @@ router.post('/change-password', async (req, res) => {
 
         const { currentPassword, newPassword } = req.body;
 
-        if (!currentPassword || !newPassword) {
+        if (typeof currentPassword !== 'string' || !currentPassword || Buffer.byteLength(currentPassword) > 72 || typeof newPassword !== 'string') {
             return res.status(400).json({
                 success: false,
                 message: 'Mevcut şifre ve yeni şifre gereklidir'
             });
         }
 
-        if (newPassword.length < 6) {
+        if (!validPassword(newPassword)) {
             return res.status(400).json({
                 success: false,
-                message: 'Yeni şifre en az 6 karakter olmalıdır'
+                message: 'Yeni şifre en az 12 karakter ve en fazla 72 bayt olmalıdır'
             });
         }
 
@@ -194,9 +199,11 @@ router.post('/change-password', async (req, res) => {
             throw updateError;
         }
 
+        await new Promise((resolve, reject) => req.session.destroy(err => err ? reject(err) : resolve()));
+        res.clearCookie('connect.sid');
         res.json({
             success: true,
-            message: 'Şifreniz başarıyla değiştirildi'
+            message: 'Şifreniz değiştirildi. Lütfen yeniden giriş yapın.'
         });
     } catch (error) {
         console.error('❌ Change password error:', error);
@@ -208,3 +215,4 @@ router.post('/change-password', async (req, res) => {
 });
 
 module.exports = router;
+

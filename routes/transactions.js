@@ -1,14 +1,21 @@
 const express = require('express');
 const { supabase } = require('../database');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
+const { requirePermission } = require('../middleware/authorization');
+const { validateInput } = require('../middleware/security');
+router.use(validateInput);
 
 // Ping endpoint
-router.get('/ping', (req, res) => {
+router.get('/ping', requirePermission('view_transactions'), (req, res) => {
   res.json({ message: 'Transactions API çalışıyor', timestamp: new Date().toISOString() });
 });
 
 // İşlemleri listele (GET /)
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('view_transactions'), async (req, res) => {
   try {
     const { 
       category_id, 
@@ -89,13 +96,13 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İşlemler listelenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Yeni işlem oluştur (POST /)
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('create_transaction'), async (req, res) => {
   try {
     const { type, amount, description, category_id, transaction_date } = req.body;
 
@@ -192,13 +199,13 @@ router.post('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İşlem oluşturulurken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // İstatistikler endpoint (/:id'den ÖNCE tanımlanmalı, yoksa 'stats' id olarak yakalanır)
-router.get('/stats/summary', async (req, res) => {
+router.get('/stats/summary', requirePermission('view_transactions'), async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
 
@@ -259,13 +266,13 @@ router.get('/stats/summary', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İstatistikler hesaplanırken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Tekil işlem getir (GET /:id)
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('view_transactions'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -316,13 +323,13 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İşlem getirilirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // İşlem güncelle (PUT /:id)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requirePermission('edit_transaction'), async (req, res) => {
   try {
     const { id } = req.params;
     const { type, amount, description, category_id, transaction_date } = req.body;
@@ -435,13 +442,13 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İşlem güncellenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // İşlem sil (DELETE /:id)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('delete_transaction'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -471,9 +478,10 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'İşlem silinirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 module.exports = router;
+

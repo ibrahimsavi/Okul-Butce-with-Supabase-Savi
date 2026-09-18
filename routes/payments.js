@@ -1,14 +1,21 @@
 const express = require('express');
 const { supabase } = require('../database');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
+const { requirePermission } = require('../middleware/authorization');
+const { validateInput } = require('../middleware/security');
+router.use(validateInput);
 
 // Ping endpoint
-router.get('/ping', (req, res) => {
+router.get('/ping', requirePermission('view_fees'), (req, res) => {
   res.json({ message: 'Payments API çalışıyor', timestamp: new Date().toISOString() });
 });
 
 // Ödemeleri listele (GET /)
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('view_fees'), async (req, res) => {
   try {
     const { fee_id, student_id, limit = 50, offset = 0 } = req.query;
 
@@ -17,12 +24,14 @@ router.get('/', async (req, res) => {
       .select(`
         id, tutar, odeme_tarihi, odeme_yontemi, makbuz_numarasi, notlar, olusturma_tarihi,
         aidat_id,
-        student_fees!payments_aidat_id_fkey(
+        student_fees!payments_aidat_id_fkey!inner(
           id, aciklama, tutar, son_odeme_tarihi, durum,
           ogrenci_id,
           students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube)
         )
       `, { count: 'exact' });
+
+    if (student_id) query = query.eq('student_fees.ogrenci_id', student_id);
 
     if (fee_id) {
       query = query.eq('aidat_id', fee_id);
@@ -35,6 +44,7 @@ router.get('/', async (req, res) => {
 
     const { data, error, count } = await query;
 
+    if (error?.code === '23514') return res.status(409).json({ success: false, message: 'Ödeme kalan borcu aşıyor. Listeyi yenileyip tekrar deneyin.' });
     if (error) throw error;
 
     const payments = data.map(row => ({
@@ -72,13 +82,13 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ödemeler listelenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Yeni ödeme oluştur (POST /)
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('manage_payments'), async (req, res) => {
   try {
     const { 
       fee_id, 
@@ -132,11 +142,12 @@ router.post('/', async (req, res) => {
     }
 
     // Önceki ödemeler
-    const { data: prevPayments } = await supabase
+    const { data: prevPayments, error: paymentsError } = await supabase
       .from('payments')
       .select('tutar')
       .eq('aidat_id', fee_id);
     
+    if (paymentsError) throw paymentsError;
     const paidAmount = prevPayments?.reduce((sum, p) => sum + parseFloat(p.tutar), 0) || 0;
     const remainingAmount = parseFloat(fee.tutar) - paidAmount;
 
@@ -161,19 +172,12 @@ router.post('/', async (req, res) => {
       .select()
       .single();
 
+    if (error?.code === '23514') return res.status(409).json({ success: false, message: 'Ödeme kalan borcu aşıyor. Listeyi yenileyip tekrar deneyin.' });
     if (error) throw error;
 
-    // Aidat durumunu güncelle
-    const newPaidAmount = paidAmount + parseFloat(amount);
-    const newStatus = newPaidAmount >= parseFloat(fee.tutar) ? 'paid' : 'pending';
-    
-    await supabase
-      .from('student_fees')
-      .update({ 
-        durum: newStatus,
-        guncelleme_tarihi: new Date().toISOString()
-      })
-      .eq('id', fee_id);
+    // Database triggers update the fee atomically with the payment.
+    const newPaidAmount = paidAmount + Number(amount);
+    const newStatus = newPaidAmount >= Number(fee.tutar) ? 'paid' : 'pending';
 
     res.status(201).json({
       success: true,
@@ -196,13 +200,13 @@ router.post('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ödeme kaydedilirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Tekil ödeme getir (GET /:id)
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('view_fees'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -218,7 +222,7 @@ router.get('/:id', async (req, res) => {
       .select(`
         id, tutar, odeme_tarihi, odeme_yontemi, makbuz_numarasi, notlar, olusturma_tarihi, guncelleme_tarihi,
         aidat_id,
-        student_fees!payments_aidat_id_fkey(
+        student_fees!payments_aidat_id_fkey!inner(
           id, aciklama, tutar, son_odeme_tarihi, durum,
           ogrenci_id,
           students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube)
@@ -227,6 +231,7 @@ router.get('/:id', async (req, res) => {
       .eq('id', id)
       .maybeSingle();
 
+    if (error?.code === '23514') return res.status(409).json({ success: false, message: 'Ödeme kalan borcu aşıyor. Listeyi yenileyip tekrar deneyin.' });
     if (error) throw error;
 
     if (!data) {
@@ -266,13 +271,13 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ödeme getirilirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Ödeme sil (DELETE /:id)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('manage_payments'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -303,30 +308,8 @@ router.delete('/:id', async (req, res) => {
       .delete()
       .eq('id', id);
 
+    if (error?.code === '23514') return res.status(409).json({ success: false, message: 'Ödeme kalan borcu aşıyor. Listeyi yenileyip tekrar deneyin.' });
     if (error) throw error;
-
-    // Update fee status
-    const { data: remainingPayments } = await supabase
-      .from('payments')
-      .select('tutar')
-      .eq('aidat_id', payment.aidat_id);
-    
-    const { data: fee } = await supabase
-      .from('student_fees')
-      .select('tutar')
-      .eq('id', payment.aidat_id)
-      .single();
-
-    const totalPaid = remainingPayments?.reduce((sum, p) => sum + parseFloat(p.tutar), 0) || 0;
-    const newStatus = totalPaid >= parseFloat(fee.tutar) ? 'paid' : 'pending';
-
-    await supabase
-      .from('student_fees')
-      .update({ 
-        durum: newStatus,
-        guncelleme_tarihi: new Date().toISOString()
-      })
-      .eq('id', payment.aidat_id);
 
     res.json({
       success: true,
@@ -339,9 +322,10 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ödeme silinirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 module.exports = router;
+

@@ -1,32 +1,45 @@
 const express = require('express');
 const { supabase } = require('../database');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
+const { requirePermission } = require('../middleware/authorization');
+const { validateInput } = require('../middleware/security');
+router.use(validateInput);
 
 // Ping endpoint
-router.get('/ping', (req, res) => {
+router.get('/ping', requirePermission('view_fees'), (req, res) => {
   res.json({ message: 'Fees API çalışıyor', timestamp: new Date().toISOString() });
 });
 
 // Aidatları listele (GET /)
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('view_fees'), async (req, res) => {
   try {
-    const { student_id, class_name, status, limit = 50, offset = 0 } = req.query;
+    const { student_id, class_name, status, search, due_date_start, due_date_end, limit = 50, offset = 0 } = req.query;
 
     let query = supabase
       .from('student_fees')
       .select(`
         id, aciklama, tutar, son_odeme_tarihi, durum, olusturma_tarihi, guncelleme_tarihi,
-        ogrenci_id,
-        students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube)
+        ogrenci_id, payments(tutar),
+        students!student_fees_ogrenci_id_fkey!inner(id, ad, soyad, ogrenci_numarasi, sinif, sube)
       `, { count: 'exact' });
+
+    if (class_name) query = query.eq('students.sinif', class_name);
 
     if (student_id) {
       query = query.eq('ogrenci_id', student_id);
     }
 
-    if (status && ['pending', 'paid', 'overdue'].includes(status)) {
-      query = query.eq('durum', status);
-    }
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+    if (search) query = query.ilike('aciklama', '%' + search.replace(/[%_]/g, '') + '%');
+    if (due_date_start) query = query.gte('son_odeme_tarihi', due_date_start);
+    if (due_date_end) query = query.lte('son_odeme_tarihi', due_date_end);
+    if (status === 'paid') query = query.eq('durum', 'paid');
+    if (status === 'pending') query = query.neq('durum', 'paid').gte('son_odeme_tarihi', today);
+    if (status === 'overdue') query = query.neq('durum', 'paid').lt('son_odeme_tarihi', today);
 
     query = query
       .order('son_odeme_tarihi', { ascending: false })
@@ -41,7 +54,7 @@ router.get('/', async (req, res) => {
       description: row.aciklama,
       amount: row.tutar,
       due_date: row.son_odeme_tarihi,
-      status: row.durum,
+      status: row.durum === 'paid' ? 'paid' : row.son_odeme_tarihi < today ? 'overdue' : 'pending',
       created_at: row.olusturma_tarihi,
       updated_at: row.guncelleme_tarihi,
       student_id: row.ogrenci_id,
@@ -50,7 +63,7 @@ router.get('/', async (req, res) => {
       student_number: row.students?.ogrenci_numarasi,
       class_name: row.students?.sinif,
       section: row.students?.sube,
-      paid_amount: 0 // TODO: Calculate from payments
+      paid_amount: (row.payments || []).reduce((sum, payment) => sum + Number(payment.tutar), 0)
     }));
 
     res.json({
@@ -69,13 +82,13 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Aidatlar listelenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Yeni aidat oluştur (POST /)
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('create_fee'), async (req, res) => {
   try {
     const { student_id, description, amount, due_date } = req.body;
 
@@ -133,8 +146,8 @@ router.post('/', async (req, res) => {
       })
       .select(`
         id, aciklama, tutar, son_odeme_tarihi, durum, olusturma_tarihi,
-        ogrenci_id,
-        students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube)
+        ogrenci_id, payments(tutar),
+        students!student_fees_ogrenci_id_fkey!inner(id, ad, soyad, ogrenci_numarasi, sinif, sube)
       `)
       .single();
 
@@ -161,13 +174,59 @@ router.post('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Aidat oluşturulurken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Tekil aidat getir (GET /:id)
-router.get('/:id', async (req, res) => {
+// Summary is calculated from payments; overdue status follows the due date.
+router.get('/stats/summary', requirePermission('view_fees'), async (req, res, next) => {
+  try {
+    const stats = Object.fromEntries(['pending','paid','overdue','totals'].map(key => [key, { count: 0, total_amount: 0 }]));
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.from('student_fees').select('id,tutar,son_odeme_tarihi,payments(tutar)').order('id').range(offset, offset + 999);
+      if (error) throw error;
+      for (const fee of data) {
+        const paid = (fee.payments || []).reduce((sum, payment) => sum + Number(payment.tutar), 0);
+        const remaining = Math.max(0, Number(fee.tutar) - paid);
+        const status = remaining === 0 ? 'paid' : fee.son_odeme_tarihi < today ? 'overdue' : 'pending';
+        stats[status].count++;
+        stats[status].total_amount += status === 'paid' ? Number(fee.tutar) : remaining;
+        stats.totals.count++;
+        stats.totals.total_amount += Number(fee.tutar);
+      }
+      if (data.length < 1000) break;
+    }
+    res.json({ success: true, data: stats });
+  } catch (error) { next(error); }
+});
+
+router.post('/bulk', requirePermission('create_fee'), async (req, res, next) => {
+  try {
+    const { description, amount, due_date, student_ids, class_names } = req.body;
+    if (typeof description !== 'string' || description.trim().length < 2 || !amount || !due_date ||
+        (student_ids && !student_ids.length) || (class_names && !class_names.length) || (student_ids && class_names)) {
+      return res.status(400).json({ success: false, message: 'Açıklama, tutar, tarih ve geçerli bir seçim gereklidir' });
+    }
+    let query = supabase.from('students').select('id').order('id').limit(501);
+    if (student_ids) query = query.in('id', student_ids);
+    if (class_names) query = query.in('sinif', class_names);
+    const { data: students, error } = await query;
+    if (error) throw error;
+    if (!students.length || students.length > 500 || (student_ids && students.length !== new Set(student_ids.map(Number)).size)) {
+      return res.status(400).json({ success: false, message: 'Tek işlemde 1–500 mevcut öğrenci seçin' });
+    }
+    const { error: insertError } = await supabase.from('student_fees').insert(students.map(student => ({
+      ogrenci_id: student.id, aciklama: description.trim(), tutar: Number(amount), son_odeme_tarihi: due_date, durum: 'pending'
+    })));
+    if (insertError) throw insertError;
+    res.status(201).json({ success: true, message: students.length + ' öğrenciye aidat atandı', count: students.length });
+  } catch (error) { next(error); }
+});
+
+router.get('/:id', requirePermission('view_fees'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -182,7 +241,7 @@ router.get('/:id', async (req, res) => {
       .from('student_fees')
       .select(`
         id, aciklama, tutar, son_odeme_tarihi, durum, olusturma_tarihi, guncelleme_tarihi,
-        ogrenci_id,
+        ogrenci_id, payments(tutar),
         students!student_fees_ogrenci_id_fkey(id, ad, soyad, ogrenci_numarasi, sinif, sube, veli_adi, veli_telefonu)
       `)
       .eq('id', id)
@@ -241,13 +300,13 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Aidat getirilirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Aidat güncelle (PUT /:id)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requirePermission('edit_fee'), async (req, res) => {
   try {
     const { id } = req.params;
     const { description, amount, due_date, status } = req.body;
@@ -274,6 +333,7 @@ router.put('/:id', async (req, res) => {
       .single();
 
     if (error) {
+      if (error.code === '23514') return res.status(409).json({ success: false, message: 'Aidat tutarı ödenen tutardan az olamaz' });
       if (error.code === 'PGRST116') {
         return res.status(404).json({
           success: false,
@@ -301,13 +361,13 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Aidat güncellenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Aidat sil (DELETE /:id)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('delete_fee'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -319,11 +379,12 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Check for related payments
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from('payments')
       .select('*', { count: 'exact', head: true })
       .eq('aidat_id', id);
 
+    if (countError) throw countError;
     if (count > 0) {
       return res.status(400).json({
         success: false,
@@ -349,9 +410,10 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Aidat silinirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 module.exports = router;
+

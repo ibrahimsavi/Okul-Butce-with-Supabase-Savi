@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
         .brand-font {
             font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
             font-weight: 700;
@@ -59,39 +58,27 @@
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
     </style>
+    <link rel="stylesheet" href="/theme.css">
+    <script src="/safe-html.js"></script>
+    <script src="/theme.js" defer></script>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
     <!-- Navigation -->
-    <nav class="gradient-bg text-white shadow-xl">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <i class="fas fa-graduation-cap text-2xl mr-3"></i>
-                    <span class="font-bold text-lg brand-font"><span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span></span>
-                </div>
-                <div class="flex items-center space-x-6">
-                    <a href="/" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
-                        <i class="fas fa-home mr-2"></i>Ana Sayfa
-                    </a>
-                    <a href="/kategoriler.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
-                        <i class="fas fa-tags mr-2"></i>Kategoriler
-                    </a>
-                    <a href="/islemler.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
-                        <i class="fas fa-exchange-alt mr-2"></i>İşlemler
-                    </a>
-                    <a href="/ogrenciler.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
-                        <i class="fas fa-users mr-2"></i>Öğrenciler
-                    </a>
-                    <a href="/aidatlar.html" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-money-check-alt mr-2"></i>Aidatlar
-                    </a>
-                    <a href="/raporlar.html" class="hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition duration-300 flex items-center">
-                        <i class="fas fa-chart-bar mr-2"></i>Raporlar
-                    </a>
-                </div>
-            </div>
+    <header class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold brand-font">
+                <i class="fas fa-tags mr-2"></i>
+                <span class="brand-name">Savi Bütçe</span>
+            </h1>
+            <nav class="flex items-center">
+                <a href="/" class="hover:text-blue-200 mr-4">Ana Sayfa</a>
+                <a href="/islemler.html" class="hover:text-blue-200 mr-4">İşlemler</a>
+                <a href="/ogrenciler.html" class="hover:text-blue-200 mr-4">Öğrenciler</a>
+                <a href="/aidatlar.html" class="hover:text-blue-200 mr-4">Aidatlar</a>
+                <a href="/raporlar.html" class="hover:text-blue-200 mr-4">Raporlar</a>
+            </nav>
         </div>
-    </nav>
+    </header>
 
     <div class="max-w-7xl mx-auto p-6">
         <!-- Page Header -->
@@ -100,7 +87,7 @@
                 <div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 brand-font">
                         <i class="fas fa-money-check-alt mr-3 text-blue-600"></i>
-                        <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span>
+                        <span class="brand-name">Savi Bütçe</span>
                     </h1>
                     <p class="text-gray-600 text-lg">Öğrenci aidatlarını yönetin, toplu atama yapın ve ödemelerini takip edin</p>
                 </div>
@@ -464,7 +451,7 @@
     <!-- Footer -->
     <footer class="bg-gray-800 text-white py-8 mt-16">
         <div class="container mx-auto text-center">
-            <h2 class="text-3xl font-bold brand-font mb-4"><span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span></h2>
+            <h2 class="text-3xl font-bold brand-font mb-4"><span class="brand-name">Savi Bütçe</span></h2>
             <p class="text-gray-400 mb-4">Profesyonel Bütçe Yönetim Sistemi</p>
             <div class="flex justify-center space-x-6 mb-4">
                 <a href="/" class="hover:text-blue-400 transition duration-300">
@@ -488,7 +475,7 @@
             </div>
             <hr class="border-gray-600 mb-4">
             <p class="text-gray-500 text-sm">
-                © 2025 <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span> - Tüm hakları saklıdır.
+                © 2025 <span class="brand-name">Savi Bütçe</span> - Tüm hakları saklıdır.
             </p>
         </div>
     </footer>

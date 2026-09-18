@@ -10,7 +10,7 @@ header h1 { white-space:nowrap; font-size:1.45rem!important; }
 header h1 i { color:#8dd4ca; }
 header nav { flex-wrap:wrap; justify-content:flex-end; gap:.25rem; }
 header nav a, header nav button { margin:0!important; font-size:.82rem; font-weight:500; }
-header nav a { color:#dce6f2; }
+header nav a { display:inline-flex; align-items:center; min-height:40px; padding:.55rem .75rem; border-radius:8px; color:#dce6f2; }
 header nav a:hover, header nav a[aria-current="page"] { background:#ffffff16!important; color:#fff; }
 #mobileMenu { background:#142d49; border-top:1px solid #ffffff24; }
 #mobileMenu a[aria-current="page"] { background:#ffffff16; }

@@ -1,27 +1,66 @@
 # Savi Bütçe
 
-Okullar için öğrenci, aidat, ödeme, gelir-gider ve rapor yönetimi uygulaması. Türkçe arayüz; rol ve izin denetimi; Excel raporları ve mobil uyumlu yönetim ekranları içerir.
+Okulların öğrenci aidatlarını, tahsilatlarını, gelir-gider hareketlerini ve kullanıcı yetkilerini tek panelden yönetmesi için geliştirilmiş web uygulaması.
 
-## Özellikler
+Savi Bütçe; Türkçe ve responsive bir yönetim arayüzünü, Express tabanlı sunucu katmanını ve Supabase PostgreSQL veritabanını bir araya getirir. Yetkilendirme kontrolleri sunucuda uygulanır; raporlar Excel biçiminde dışa aktarılabilir.
 
-- Öğrenci, kategori ve gelir-gider kayıtları
-- Tekli veya toplu aidat oluşturma ve ödeme takibi
-- Bekleyen, ödenen ve geciken aidat özetleri
-- Rol ve izin tabanlı kullanıcı yönetimi
-- Excel raporları
-- Sunucu taraflı oturum, giriş sınırlaması ve istek doğrulama
-- Supabase PostgreSQL üzerinde veritabanı kuralları ve erişim koruması
+## İçindekiler
 
-## Gereksinimler
+- [Öne çıkan özellikler](#öne-çıkan-özellikler)
+- [Teknolojiler](#teknolojiler)
+- [Yeni kurulum](#yeni-kurulum)
+- [Ortam değişkenleri](#ortam-değişkenleri)
+- [Kullanılabilir komutlar](#kullanılabilir-komutlar)
+- [Proje yapısı](#proje-yapısı)
+- [Güvenlik](#güvenlik)
+- [Üretime alma kontrol listesi](#üretime-alma-kontrol-listesi)
+- [Sorun giderme](#sorun-giderme)
+
+## Öne çıkan özellikler
+
+| Modül | Sağladığı işlevler |
+| --- | --- |
+| Gösterge paneli | Gelir, gider, bakiye ve aidat durumlarını özetler. |
+| Öğrenciler | Öğrenci ve veli bilgilerini kaydeder, günceller ve listeler. |
+| Aidatlar | Tekli veya toplu aidat oluşturur; bekleyen, ödenen ve geciken kayıtları izler. |
+| Ödemeler | Tahsilatları ödeme yöntemi ve makbuz bilgileriyle kaydeder. |
+| İşlemler | Gelir-gider hareketlerini öğrenci ve kategorilerle ilişkilendirir. |
+| Kategoriler | Gelir ve gider türlerini yönetir. |
+| Raporlar | Mali ve öğrenci raporlarını görüntüler, Excel çıktısı üretir. |
+| Yönetim | Kullanıcı, rol ve izinleri yönetir. |
+
+Ek olarak uygulama; sunucu taraflı oturum yönetimi, rol ve izin denetimi, giriş denemesi sınırlaması, istek doğrulama ve veritabanı seviyesinde ödeme tutarlılığı sağlar.
+
+## Teknolojiler
+
+- **Çalışma ortamı:** Node.js 22+
+- **Sunucu:** Express 5
+- **Veritabanı:** Supabase PostgreSQL
+- **Oturum deposu:** PostgreSQL (`connect-pg-simple`)
+- **Arayüz:** HTML, JavaScript ve Tailwind CSS
+- **Raporlama:** ExcelJS
+- **Test:** Node.js test çalıştırıcısı ve PGlite
+
+## Yeni kurulum
+
+Bu bölüm boş bir Supabase projesi üzerinde sıfırdan kurulum içindir. Kurulum SQL'i mevcut uygulama tablolarını silerek yeniden oluşturduğu için veri bulunan bir projede çalıştırılmamalıdır.
+
+### 1. Gereksinimleri hazırlayın
 
 - Node.js 22 veya üzeri
 - npm
-- Bir Supabase projesi
-- Üretim ortamında kalıcı oturumlar için PostgreSQL bağlantısı
+- Yeni ve boş bir [Supabase](https://supabase.com/) projesi
+- Git
 
-## Hızlı kurulum
+Sürümleri kontrol edin:
 
-### 1. Projeyi indirin
+```sh
+node --version
+npm --version
+git --version
+```
+
+### 2. Projeyi indirin
 
 ```sh
 git clone https://github.com/ibrahimsavi/Okul-Butce-with-Supabase-Savi.git
@@ -29,72 +68,50 @@ cd Okul-Butce-with-Supabase-Savi
 npm ci
 ```
 
-### 2. Supabase veritabanını hazırlayın
+### 3. Veritabanını oluşturun
 
-Supabase panelinde **SQL Editor** bölümünü açın ve kurulum türünüze uygun seçeneği uygulayın.
+1. Supabase panelinde projenizi açın.
+2. Sol menüden **SQL Editor** bölümüne girin.
+3. Depodaki `supabase/full_setup.sql` dosyasının tamamını kopyalayın.
+4. SQL Editor'e yapıştırıp **Run** düğmesine basın.
+5. İşlemin hatasız tamamlandığını doğrulayın.
 
-#### Yeni ve boş proje
+Bu dosya uygulama tablolarını, rollerini, izinlerini, başlangıç verilerini, RLS ayarlarını ve ödeme bütünlüğünü koruyan veritabanı kurallarını birlikte oluşturur.
 
-`supabase/full_setup.sql` dosyasının tamamını SQL Editor'de çalıştırın. Bu dosya tabloları, rolleri, izinleri, örnek verileri ve güvenlik kurallarını oluşturur.
+> [!CAUTION]
+> `supabase/full_setup.sql` ve `supabase/reset_schema.sql` mevcut uygulama tablolarını siler. Bu dosyaları yalnızca yeni ve boş kurulumda kullanın.
 
-> [!WARNING]
-> `full_setup.sql` ve `reset_schema.sql` mevcut tabloları siler. İçinde korunması gereken veri bulunan bir projede bu dosyaları çalıştırmayın.
-
-#### Mevcut kurulum
-
-Önce veritabanının yedeğini alın. Ardından SQL Editor'de aşağıdaki dosyaları sırayla çalıştırın:
-
-1. `supabase/harden_access.sql`
-2. `supabase/harden_payments.sql`
-
-Bu geçişler mevcut kayıtları koruyarak doğrudan anonim tablo erişimini kapatır ve aidat/ödeme tutarlılığını veritabanı seviyesinde uygular. Ayrıntılar için [SECURITY.md](SECURITY.md) dosyasına bakın.
-
-### 3. Ortam değişkenlerini ayarlayın
-
-Örnek dosyayı kopyalayın:
+### 4. Ortam dosyasını oluşturun
 
 ```sh
 cp .env.example .env
 ```
 
-`.env` dosyasındaki değerleri kendi ortamınıza göre doldurun:
+Supabase panelinde **Project Settings → API** bölümünden proje adresini ve `service_role` anahtarını alın. Ardından `.env` dosyasını yerel geliştirme için şu şekilde doldurun:
 
-| Değişken | Açıklama | Yerel örnek |
-| --- | --- | --- |
-| `SUPABASE_URL` | Supabase proje adresi | `https://proje-kodu.supabase.co` |
-| `SUPABASE_SERVICE_KEY` | Supabase **service_role** anahtarı | Supabase → Project Settings → API |
-| `DATABASE_URL` | Kalıcı oturum deposu için PostgreSQL bağlantısı | Yerel geliştirmede boş bırakılabilir |
-| `PORT` | Uygulama portu | `9876` |
-| `NODE_ENV` | Çalışma ortamı | `development` |
-| `APP_ORIGIN` | Tarayıcının uygulamaya eriştiği tam adres | `http://localhost:9876` |
-| `SESSION_COOKIE_SECURE` | Çerezin yalnızca HTTPS ile gönderilmesi | Yerelde `false`, üretimde `true` |
-| `SESSION_SECRET` | Oturumları imzalamak için güçlü ve rastgele anahtar | Aşağıdaki komutla üretin |
-| `TRUST_PROXY` | Güvenilen proxy IP/CIDR listesi | Doğrudan bağlantıda boş bırakın |
+```dotenv
+SUPABASE_URL=https://proje-kodu.supabase.co
+SUPABASE_SERVICE_KEY=service-role-anahtariniz
+DATABASE_URL=
+PORT=9876
+NODE_ENV=development
+APP_ORIGIN=http://localhost:9876
+SESSION_COOKIE_SECURE=false
+SESSION_SECRET=uzun-ve-rastgele-bir-deger
+TRUST_PROXY=
+```
 
-Güçlü bir oturum anahtarı üretin:
+Güçlü bir oturum anahtarı üretmek için:
 
 ```sh
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-`SUPABASE_SERVICE_KEY` yalnızca sunucuda tutulmalıdır. `.env` dosyasını Git'e eklemeyin ve bu anahtarı tarayıcı kodunda kullanmayın.
+Üretilen değeri `SESSION_SECRET` alanına yazın. `.env` dosyasını Git'e eklemeyin.
 
-Yerel geliştirme için en küçük yapılandırma şöyledir:
+### 5. İlk yönetici hesabını oluşturun
 
-```dotenv
-SUPABASE_URL=https://proje-kodu.supabase.co
-SUPABASE_SERVICE_KEY=service-role-anahtariniz
-PORT=9876
-NODE_ENV=development
-APP_ORIGIN=http://localhost:9876
-SESSION_COOKIE_SECURE=false
-SESSION_SECRET=uretmis-oldugunuz-uzun-rastgele-deger
-TRUST_PROXY=
-```
-
-### 4. İlk yönetici hesabını oluşturun
-
-Veritabanı kurulumu tamamlandıktan sonra yönetici bilgilerini geçici olarak tanımlayın:
+macOS veya Linux:
 
 ```sh
 ADMIN_USERNAME=admin \
@@ -103,56 +120,129 @@ ADMIN_FULL_NAME='Sistem Yöneticisi' \
 npm run create-admin
 ```
 
-Parola en az 12 karakter olmalı ve UTF-8 olarak 72 baytı aşmamalıdır. Hesap oluşturulduktan sonra `ADMIN_PASSWORD` değerini ortamdan kaldırın. Komut mevcut bir hesabın parolasını değiştirmez.
+Windows PowerShell:
 
-### 5. Testleri çalıştırın
+```powershell
+$env:ADMIN_USERNAME='admin'
+$env:ADMIN_PASSWORD='en-az-12-karakter-guclu-parola'
+$env:ADMIN_FULL_NAME='Sistem Yöneticisi'
+npm run create-admin
+Remove-Item Env:ADMIN_PASSWORD
+```
+
+Parola en az 12 karakter olmalı ve UTF-8 olarak 72 baytı aşmamalıdır. Komut başarıyla tamamlandıktan sonra `ADMIN_PASSWORD` değerini terminal ortamından kaldırın. Bu komut mevcut bir kullanıcının parolasını değiştirmez.
+
+### 6. Kontrolleri çalıştırın
 
 ```sh
 npm test
 npm audit --omit=dev --audit-level=moderate
 ```
 
-Testler canlı Supabase veritabanını değiştirmez. HTTP oturum ve yetki akışları sahte veri katmanıyla; SQL geçişleri yerel PostgreSQL uyumlu test motoruyla doğrulanır.
+Testler canlı Supabase verilerini değiştirmez. HTTP ve yetki akışları sahte veri katmanıyla, SQL kuralları ise yerel PostgreSQL uyumlu test motoruyla doğrulanır.
 
-### 6. Uygulamayı başlatın
+### 7. Uygulamayı başlatın
 
 ```sh
 npm start
 ```
 
-Tarayıcıda [http://localhost:9876](http://localhost:9876) adresini açın ve oluşturduğunuz yönetici hesabıyla giriş yapın. Herkese açık sağlık kontrolü `GET /health` adresindedir.
+Tarayıcıda [http://localhost:9876](http://localhost:9876) adresini açın ve oluşturduğunuz yönetici hesabıyla giriş yapın. Uygulamanın çalıştığını doğrulamak için [http://localhost:9876/health](http://localhost:9876/health) adresini de kullanabilirsiniz.
 
-## Üretim ayarları
+## Ortam değişkenleri
 
-Üretimde aşağıdaki ayarlar zorunludur:
+| Değişken | Zorunluluk | Açıklama |
+| --- | --- | --- |
+| `SUPABASE_URL` | Her ortamda | Supabase projesinin HTTPS adresi. |
+| `SUPABASE_SERVICE_KEY` | Her ortamda | Yalnızca sunucuda kullanılan `service_role` anahtarı. |
+| `DATABASE_URL` | Üretimde | Kalıcı oturum deposu için PostgreSQL bağlantı adresi. |
+| `PORT` | İsteğe bağlı | Sunucu portu; varsayılan değer `9876`. |
+| `NODE_ENV` | Her ortamda | Yerelde `development`, canlı sistemde `production`. |
+| `APP_ORIGIN` | Her ortamda | Kullanıcının uygulamaya eriştiği tam adres; sonunda `/` olmamalı. |
+| `SESSION_COOKIE_SECURE` | Her ortamda | Yerel HTTP'de `false`, üretim HTTPS ortamında `true`. |
+| `SESSION_SECRET` | Her ortamda | Oturum çerezlerini imzalayan güçlü ve benzersiz anahtar. |
+| `TRUST_PROXY` | Proxy varsa | Virgülle ayrılmış güvenilir proxy IP veya CIDR değerleri. |
 
-- `NODE_ENV=production`
-- HTTPS adresini içeren `APP_ORIGIN`
-- `SESSION_COOKIE_SECURE=true`
-- Güçlü ve benzersiz `SESSION_SECRET`
-- Kalıcı oturum deposu için `DATABASE_URL`
-- Ters proxy kullanılıyorsa yalnızca gerçek proxy IP/CIDR değerlerini içeren `TRUST_PROXY`
+## Kullanılabilir komutlar
 
-`DATABASE_URL` kullanıcısının `private` şemasında oturum tablosu oluşturma izni bulunmalıdır. `private` şemasını Supabase Data API üzerinden yayımlamayın. Canlıya geçmeden önce proxy, yetki ve ödeme akışlarını ayrı bir test ortamında doğrulayın.
-
-## Kullanışlı komutlar
-
-| Komut | İşlev |
+| Komut | Açıklama |
 | --- | --- |
-| `npm start` | Uygulamayı başlatır |
-| `npm run dev` | Uygulamayı geliştirme modunda başlatır |
-| `npm test` | Güvenlik, API ve SQL geçiş testlerini çalıştırır |
-| `npm run create-admin` | İlk yönetici hesabını oluşturur |
+| `npm start` | Uygulamayı normal modda başlatır. |
+| `npm run dev` | Uygulamayı geliştirme yapılandırmasıyla başlatır. |
+| `npm test` | API, güvenlik ve veritabanı testlerini çalıştırır. |
+| `npm run create-admin` | Ortam değişkenlerinden ilk yönetici hesabını oluşturur. |
 
 ## Proje yapısı
 
 ```text
-public/       Tarayıcı arayüzü
-routes/       API uçları
-middleware/   Kimlik, yetki ve güvenlik kontrolleri
-scripts/      Yönetim yardımcıları
-supabase/     Kurulum ve güvenlik SQL dosyaları
-tests/        HTTP, güvenlik ve migration testleri
+.
+├── middleware/   Kimlik doğrulama, yetkilendirme ve güvenlik kontrolleri
+├── public/       HTML, tarayıcı JavaScript'i ve ortak tema dosyaları
+├── routes/       REST API uçları
+├── scripts/      Yönetim yardımcıları
+├── supabase/     Veritabanı kurulumu ve güvenlik SQL dosyaları
+├── tests/        HTTP, güvenlik ve SQL testleri
+├── database.js   Supabase sunucu bağlantısı
+└── server.js     Express uygulamasının giriş noktası
 ```
 
-Güvenli yükseltme, bilinen işletim sınırları ve canlı ortam kontrol listesi için [SECURITY.md](SECURITY.md) dosyasını okuyun.
+## Güvenlik
+
+Uygulama Supabase tablolarına tarayıcıdan doğrudan erişmez. Tarayıcı yalnızca Express API ile haberleşir; veri işlemleri sunucuda tutulan `service_role` anahtarıyla yapılır. Rol ve izinler her korumalı istekte sunucu tarafında yeniden denetlenir.
+
+### Anahtarlar ve gizli değerler
+
+- `SUPABASE_SERVICE_KEY`, `SESSION_SECRET`, `DATABASE_URL` ve yönetici parolası hiçbir zaman tarayıcı koduna, Git geçmişine veya herkese açık kayıtlara yazılmamalıdır.
+- `SUPABASE_ANON_KEY` bu uygulamanın sunucu akışında kullanılmaz.
+- `.env` dosyası paylaşılmamalı; her ortam için farklı `SESSION_SECRET` kullanılmalıdır.
+- Yönetici oluşturulduktan sonra `ADMIN_PASSWORD` ortamdan kaldırılmalıdır.
+
+### Veritabanı erişimi
+
+- Kurulum, uygulama tablolarında RLS'yi etkinleştirir ve `PUBLIC`, `anon` ile `authenticated` rollerinin doğrudan tablo erişimini kaldırır.
+- Ödeme tetikleyicileri fazla tahsilatı, sıfır veya negatif ödemeyi ve aidat tutarının ödenmiş miktarın altına indirilmesini engeller.
+- `DATABASE_URL` kullanıcısı `private` şemasında oturum tablosu oluşturabilmelidir.
+- `private` şeması Supabase Data API üzerinden yayımlanmamalıdır.
+
+### Oturum ve ağ güvenliği
+
+- Üretimde `SESSION_COOKIE_SECURE=true` ve yalnızca HTTPS içeren bir `APP_ORIGIN` kullanılmalıdır.
+- Ters proxy kullanılıyorsa `TRUST_PROXY` yalnızca gerçek proxy IP/CIDR değerlerini içermelidir. Proxy, `X-Forwarded-Proto: https` başlığını kendisi ayarlamalı ve istemciden gelen değeri kabul etmemelidir.
+- Üretimde `DATABASE_URL` ile kalıcı PostgreSQL oturum deposu zorunludur. Parolası değiştirilen veya pasifleştirilen kullanıcının eski oturumu sonraki istekte geçersiz olur; her girişte oturum kimliği yenilenir.
+- Giriş denemesi sınırı tek sunucu işleminin belleğinde tutulur. Birden fazla uygulama örneği kullanılıyorsa proxy veya ağ geçidi üzerinde ortak hız sınırı eklenmelidir.
+- `/health` uç noktası oturum istemez ve mali veri döndürmez.
+
+### Tarayıcı güvenlik politikası
+
+Uygulama çerçeveleme, nesne kaynağı ve temel adres kullanımı için güvenlik başlıkları gönderir. Bazı sayfalarda satır içi betikler ve CDN kaynakları bulunduğundan tam kısıtlı bir Content Security Policy henüz uygulanmamaktadır. Üretimde yalnızca güvenilen CDN kaynakları kullanılmalı ve bağımlılık güncellemeleri düzenli olarak denetlenmelidir.
+
+## Üretime alma kontrol listesi
+
+- [ ] `NODE_ENV=production`
+- [ ] `APP_ORIGIN` gerçek HTTPS adresi
+- [ ] `SESSION_COOKIE_SECURE=true`
+- [ ] Güçlü ve bu kuruluma özel `SESSION_SECRET`
+- [ ] Kalıcı oturumlar için `DATABASE_URL`
+- [ ] Yalnızca gerçek proxy adreslerini içeren `TRUST_PROXY`
+- [ ] Supabase `service_role` anahtarının yalnızca sunucuda bulunması
+- [ ] `private` şemasının Supabase Data API'ye kapalı olması
+- [ ] `npm test` ve bağımlılık denetiminin başarılı olması
+- [ ] Yetki, ödeme, yedekleme ve geri yükleme akışlarının test ortamında doğrulanması
+
+## Sorun giderme
+
+### Uygulama Supabase'e bağlanamıyor
+
+`SUPABASE_URL` ve `SUPABASE_SERVICE_KEY` değerlerini kontrol edin. Anahtarın `anon` değil `service_role` anahtarı olduğundan ve `.env` dosyasının proje kökünde bulunduğundan emin olun.
+
+### Yönetici oluşturulamıyor
+
+Önce `supabase/full_setup.sql` dosyasını çalıştırdığınızı doğrulayın. `roles` tablosunda `admin` rolü bulunmalı; parola da uzunluk kurallarına uymalıdır.
+
+### Üretimde giriş oturumu korunmuyor
+
+`DATABASE_URL`, `APP_ORIGIN`, `SESSION_COOKIE_SECURE` ve proxy ayarlarını kontrol edin. HTTPS kullanan proxy'nin `X-Forwarded-Proto` başlığını doğru ilettiğinden emin olun.
+
+### Port kullanımda hatası alınıyor
+
+`.env` içindeki `PORT` değerini boşta olan başka bir portla değiştirin ve `APP_ORIGIN` adresini aynı porta göre güncelleyin.

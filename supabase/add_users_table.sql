@@ -16,7 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_users_kullanici_adi ON users(kullanici_adi);
 
 -- Insert default admin user
 -- Username: admin
--- Create the first administrator with npm run create-admin (see SECURITY.md).
+-- Create the first administrator with npm run create-admin (see README.md).
 
 -- Note: For production, you should change the default password immediately after first login
 -- To generate a new password hash, you can use the following Node.js code:

@@ -239,7 +239,7 @@ AND p.izin_adi IN (
 )
 ON CONFLICT (rol_id, izin_id) DO NOTHING;
 
--- Create the first administrator with npm run create-admin (see SECURITY.md).
+-- Create the first administrator with npm run create-admin (see README.md).
 
 
 -- Server-only access: application sessions are verified by Express, not Supabase Auth.

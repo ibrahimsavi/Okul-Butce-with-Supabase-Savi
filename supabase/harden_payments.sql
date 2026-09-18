@@ -48,6 +48,6 @@ CREATE TRIGGER payment_balance_guard BEFORE INSERT OR UPDATE OR DELETE ON public
 DROP TRIGGER IF EXISTS payment_balance_refresh ON public.payments;
 CREATE TRIGGER payment_balance_refresh AFTER INSERT OR UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.refresh_fee_balance();
 DROP TRIGGER IF EXISTS fee_balance_guard ON public.student_fees;
-CREATE TRIGGER fee_balance_guard BEFORE UPDATE ON public.student_fees FOR EACH ROW EXECUTE FUNCTION public.validate_fee_balance();
+CREATE TRIGGER fee_balance_guard BEFORE INSERT OR UPDATE ON public.student_fees FOR EACH ROW EXECUTE FUNCTION public.validate_fee_balance();
 REVOKE ALL ON FUNCTION public.validate_payment_balance(), public.refresh_fee_balance(), public.validate_fee_balance() FROM PUBLIC, anon, authenticated;
 COMMIT;

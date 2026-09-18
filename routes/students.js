@@ -1,14 +1,21 @@
 const express = require('express');
 const { supabase } = require('../database');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
+const { requirePermission } = require('../middleware/authorization');
+const { validateInput } = require('../middleware/security');
+router.use(validateInput);
 
 // Ping endpoint
-router.get('/ping', (req, res) => {
+router.get('/ping', requirePermission('view_students'), (req, res) => {
   res.json({ message: 'Students API çalışıyor', timestamp: new Date().toISOString() });
 });
 
 // Öğrencileri listele (GET /)
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('view_students'), async (req, res) => {
   try {
     const { 
       class_name, 
@@ -32,7 +39,8 @@ router.get('/', async (req, res) => {
     }
 
     if (search) {
-      query = query.or(`ad.ilike.%${search}%,soyad.ilike.%${search}%,ogrenci_numarasi.ilike.%${search}%,veli_adi.ilike.%${search}%`);
+      const term = search.replace(/[\\%,.*()"]/g, ' ').trim();
+      query = query.or(`ad.ilike.%${term}%,soyad.ilike.%${term}%,ogrenci_numarasi.ilike.%${term}%,veli_adi.ilike.%${term}%`);
     }
 
     // Sıralama ve sayfalama
@@ -80,13 +88,13 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenciler listelenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Yeni öğrenci oluştur (POST /)
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('create_student'), async (req, res) => {
   try {
     const { 
       first_name, 
@@ -183,13 +191,13 @@ router.post('/', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenci oluşturulurken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Sınıf/şube istatistikleri (/:id'den ÖNCE tanımlanmalı, yoksa 'stats' id olarak yakalanır)
-router.get('/stats/classes', async (req, res) => {
+router.get('/stats/classes', requirePermission('view_students'), async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('students')
@@ -233,13 +241,13 @@ router.get('/stats/classes', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Sınıf istatistikleri hesaplanırken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Sınıf listesini getir - dropdown için (/:id'den ÖNCE tanımlanmalı)
-router.get('/meta/classes', async (req, res) => {
+router.get('/meta/classes', requirePermission('view_students'), async (req, res) => {
   try {
     const { data: classes } = await supabase
       .from('students')
@@ -268,13 +276,13 @@ router.get('/meta/classes', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Sınıf verileri alınırken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Tekil öğrenci getir (GET /:id)
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('view_students'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -324,13 +332,13 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenci getirilirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Öğrenci güncelle (PUT /:id)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requirePermission('edit_student'), async (req, res) => {
   try {
     const { id } = req.params;
     const { 
@@ -428,13 +436,13 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenci güncellenirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 // Öğrenci sil (DELETE /:id)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('delete_student'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -491,9 +499,10 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Öğrenci silinirken bir hata oluştu',
-      error: error.message
+      error: 'İşlem tamamlanamadı'
     });
   }
 });
 
 module.exports = router;
+

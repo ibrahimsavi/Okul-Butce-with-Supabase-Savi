@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
         .brand-font {
             font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
             font-weight: 700;
@@ -27,6 +26,9 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
     </style>
+    <link rel="stylesheet" href="/theme.css">
+    <script src="/safe-html.js"></script>
+    <script src="/theme.js" defer></script>
 </head>
 <body class="gradient-bg">
     <div class="login-container">
@@ -37,7 +39,7 @@
                     <i class="fas fa-graduation-cap text-4xl text-white"></i>
                 </div>
                 <h1 class="text-4xl font-bold brand-font bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                    <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span>
+                    <span class="brand-name">Savi Bütçe</span>
                 </h1>
                 <p class="text-gray-600">Lütfen giriş yapın</p>
             </div>
@@ -75,7 +77,7 @@
                         >
                         <button 
                             type="button" 
-                            id="toggle-password" 
+                            id="toggle-password" aria-label="Şifreyi göster veya gizle"
                             class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                         >
                             <i class="fas fa-eye" id="eye-icon"></i>
@@ -84,7 +86,7 @@
                 </div>
 
                 <!-- Error Message -->
-                <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <div id="error-message" role="alert" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     <i class="fas fa-exclamation-circle mr-2"></i>
                     <span id="error-text"></span>
                 </div>
@@ -102,7 +104,7 @@
 
             <!-- Footer -->
             <div class="mt-8 text-center text-sm text-gray-500">
-                <p>© 2025 <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span></p>
+                <p>© 2025 <span class="brand-name">Savi Bütçe</span></p>
                 <p class="mt-1">Profesyonel Bütçe Yönetim Sistemi</p>
             </div>
         </div>
@@ -213,3 +215,4 @@
     </script>
 </body>
 </html>
+

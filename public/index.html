@@ -8,12 +8,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
         .brand-font {
             font-family: 'Dancing Script', 'Times New Roman', cursive, serif;
             font-weight: 700;
         }
     </style>
+    <link rel="stylesheet" href="/theme.css">
+    <script src="/safe-html.js"></script>
+    <script src="/theme.js" defer></script>
 </head>
 <body class="bg-gray-100">
     <!-- Header -->
@@ -21,7 +23,7 @@
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold brand-font">
                 <i class="fas fa-school mr-2"></i>
-                <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span>
+                <span class="brand-name">Savi Bütçe</span>
             </h1>
             <nav class="hidden md:flex items-center">
                 <a href="/" class="bg-blue-700 hover:bg-blue-800 px-3 py-2 rounded-md mr-2">Ana Sayfa</a>
@@ -40,7 +42,7 @@
                     <i class="fas fa-sign-out-alt mr-1"></i>Çıkış
                 </button>
             </nav>
-            <button id="mobileMenuButton" class="md:hidden">
+            <button id="mobileMenuButton" aria-label="Gezinme menüsünü aç" aria-controls="mobileMenu" aria-expanded="false" class="md:hidden">
                 <i class="fas fa-bars text-xl"></i>
             </button>
         </div>
@@ -71,8 +73,8 @@
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
             <div class="flex items-center justify-between flex-wrap">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Hoş Geldiniz!</h2>
-                    <p class="text-gray-600">Bugün: <span id="currentDate" class="font-medium"></span></p>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Bütçe Özeti</h2>
+                    <p class="text-gray-600">Güncel mali durum · <span id="currentDate" class="font-medium"></span></p>
                 </div>
                 <div class="flex space-x-4 mt-4 lg:mt-0">
                     <button 
@@ -101,7 +103,7 @@
                     <div>
                         <p class="text-sm text-gray-600 mb-1">Net Bakiye</p>
                         <p id="netBalance" class="text-2xl font-bold text-gray-800">₺0.00</p>
-                        <p class="text-xs text-gray-500 mt-1">Son 30 gün</p>
+                        <p class="text-xs text-gray-500 mt-1">Seçili ayın net bakiyesi</p>
                     </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                         <i class="fas fa-wallet text-blue-600 text-xl"></i>
@@ -316,7 +318,7 @@
     <!-- Footer -->
     <footer class="bg-gray-800 text-white py-8 mt-16">
         <div class="container mx-auto text-center">
-            <h2 class="text-3xl font-bold brand-font mb-4"><span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span></h2>
+            <h2 class="text-3xl font-bold brand-font mb-4"><span class="brand-name">Savi Bütçe</span></h2>
             <p class="text-gray-400 mb-4">Profesyonel Bütçe Yönetim Sistemi</p>
             <div class="flex justify-center space-x-6 mb-4">
                 <a href="/" class="hover:text-blue-400 transition duration-300">
@@ -340,7 +342,7 @@
             </div>
             <hr class="border-gray-600 mb-4">
             <p class="text-gray-500 text-sm">
-                © 2025 <span style="font-family: 'Times New Roman', Times, serif; font-weight: bold; font-style: italic; color: orange;">Savi Bütçe v.1</span> - Tüm hakları saklıdır.
+                © 2025 <span class="brand-name">Savi Bütçe</span> - Tüm hakları saklıdır.
             </p>
         </div>
     </footer>

@@ -177,21 +177,21 @@ class StudentManager {
                         <i class="fas fa-user text-blue-600 text-sm"></i>
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">${student.first_name} ${student.last_name}</p>
-                        ${student.student_number ? `<p class="text-xs text-gray-500">#${student.student_number}</p>` : ''}
+                        <p class="text-sm font-medium text-gray-900">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)}</p>
+                        ${student.student_number ? `<p class="text-xs text-gray-500">#${escapeHtml(student.student_number)}</p>` : ''}
                     </div>
                 </div>
             </td>
             <td class="px-4 py-3 text-sm text-gray-900">
-                ${student.student_number || '-'}
+                ${escapeHtml(student.student_number || '-')}
             </td>
             <td class="px-4 py-3">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    ${classSection}
+                    ${escapeHtml(classSection)}
                 </span>
             </td>
             <td class="px-4 py-3 text-sm text-gray-600">
-                ${parentInfo.split('\n').map(line => `<div>${line}</div>`).join('')}
+                ${parentInfo.split('\n').map(line => `<div>${escapeHtml(line)}</div>`).join('')}
             </td>
             <td class="px-4 py-3 text-sm text-gray-500">
                 ${formattedDate}
@@ -206,7 +206,7 @@ class StudentManager {
                         <i class="fas fa-edit text-sm"></i>
                     </button>
                     <button 
-                        onclick="studentManager.showDeleteModal(${student.id}, '${student.first_name} ${student.last_name}')"
+                        data-delete-student="${student.id}"
                         class="text-red-600 hover:text-red-900 p-2 rounded-md hover:bg-red-50 transition-colors duration-150"
                         title="Sil"
                     >
@@ -216,6 +216,7 @@ class StudentManager {
             </td>
         `;
 
+        row.querySelector('[data-delete-student]').addEventListener('click', () => this.showDeleteModal(student.id, student.first_name + ' ' + student.last_name));
         return row;
     }
 
@@ -447,7 +448,7 @@ class StudentManager {
         messageDiv.className = `${bgColor} text-white px-4 py-3 rounded-md shadow-lg mb-2 flex items-center transform transition-transform duration-300 translate-x-full max-w-md`;
         messageDiv.innerHTML = `
             <i class="fas ${icon} mr-2"></i>
-            <span>${message}</span>
+            <span>${escapeHtml(message)}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
             </button>

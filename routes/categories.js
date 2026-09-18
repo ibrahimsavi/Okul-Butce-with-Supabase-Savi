@@ -1,14 +1,21 @@
 const express = require('express');
 const router = express.Router();
+for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
+  if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
+  next();
+});
+const { requirePermission } = require('../middleware/authorization');
+const { validateInput } = require('../middleware/security');
+router.use(validateInput);
 const { supabase } = require('../database');
 
 // Ping endpoint - bağlantı testi
-router.get('/ping', (req, res) => {
+router.get('/ping', requirePermission('view_categories'), (req, res) => {
   res.json({ message: 'Categories API çalışıyor', timestamp: new Date().toISOString() });
 });
 
 // Kategorileri listele (GET /)
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('view_categories'), async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('categories')
@@ -31,12 +38,12 @@ router.get('/', async (req, res) => {
     res.json({ success: true, data: rows, count: rows.length });
   } catch (err) {
     console.error('❌ Kategoriler listeleme hatası:', err.message);
-    res.status(500).json({ error: 'Kategoriler listelenemedi', message: err.message });
+    res.status(500).json({ error: 'Kategoriler listelenemedi', message: 'İşlem tamamlanamadı' });
   }
 });
 
 // Yeni kategori oluştur (POST /)
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('create_category'), async (req, res) => {
   const { name, type, description } = req.body;
   if (!name || !type) {
     return res.status(400).json({ error: 'Kategori adı ve tipi zorunludur', required: ['name', 'type'] });
@@ -74,12 +81,12 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Kategori oluşturma hatası:', err.message);
-    res.status(500).json({ error: 'Kategori oluşturulamadı', message: err.message });
+    res.status(500).json({ error: 'Kategori oluşturulamadı', message: 'İşlem tamamlanamadı' });
   }
 });
 
 // Kategori güncelle (PUT /:id)
-router.put('/:id', async (req, res) => {
+router.put('/:id', requirePermission('edit_category'), async (req, res) => {
   const { id } = req.params;
   const { name, type, description } = req.body;
   if (!id || isNaN(parseInt(id))) { return res.status(400).json({ error: 'Geçersiz kategori ID' }); }
@@ -120,12 +127,12 @@ router.put('/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Kategori güncelleme hatası:', err.message);
-    res.status(500).json({ error: 'Kategori güncellenemedi', message: err.message });
+    res.status(500).json({ error: 'Kategori güncellenemedi', message: 'İşlem tamamlanamadı' });
   }
 });
 
 // Kategori sil (DELETE /:id)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('delete_category'), async (req, res) => {
   const { id } = req.params;
   if (!id || isNaN(parseInt(id))) { return res.status(400).json({ error: 'Geçersiz kategori ID' }); }
   try {
@@ -170,7 +177,7 @@ router.delete('/:id', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Kategori silme hatası:', err.message);
-    res.status(500).json({ error: 'Kategori silinemedi', message: err.message });
+    res.status(500).json({ error: 'Kategori silinemedi', message: 'İşlem tamamlanamadı' });
   }
 });
 

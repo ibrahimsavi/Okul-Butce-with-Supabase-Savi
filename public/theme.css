@@ -1,1 +1,86 @@
-/* Theme styles removed - Light theme only */
+/* Shared institutional design system. Local fonts keep the interface private and fast. */
+:root { color-scheme: light; --ink:#172b45; --muted:#596b80; --brand:#224d78; --accent:#177b78; --line:#dce4ed; --surface:#fff; --canvas:#f3f6fa; }
+html { scroll-behavior:smooth; }
+body { font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:var(--canvas); line-height:1.55; -webkit-font-smoothing:antialiased; }
+body.bg-gray-100 { background:var(--canvas); }
+.brand-font, .brand-name { font-family:inherit!important; font-style:normal!important; font-weight:700; letter-spacing:-.035em; color:inherit!important; }
+header.bg-blue-600 { background:#142d49; border-bottom:3px solid var(--accent); padding:1.15rem 1.5rem; box-shadow:0 2px 8px #172b4512; }
+header > .container { max-width:1440px; gap:1.5rem; }
+header h1 { white-space:nowrap; font-size:1.45rem!important; }
+header h1 i { color:#8dd4ca; }
+header nav { flex-wrap:wrap; justify-content:flex-end; gap:.25rem; }
+header nav a, header nav button { margin:0!important; font-size:.82rem; font-weight:500; }
+header nav a { color:#dce6f2; }
+header nav a:hover, header nav a[aria-current="page"] { background:#ffffff16!important; color:#fff; }
+#mobileMenu { background:#142d49; border-top:1px solid #ffffff24; }
+#mobileMenu a[aria-current="page"] { background:#ffffff16; }
+main.container { max-width:1440px; margin-top:2rem; }
+h2, h3 { letter-spacing:-.025em; color:var(--ink); }
+.bg-white.rounded-lg, .bg-white.rounded-xl { border:1px solid var(--line); border-radius:14px; box-shadow:0 3px 14px #172b4506; }
+.shadow-md { box-shadow:0 3px 14px #172b4507; }
+.text-gray-800, .text-gray-900 { color:var(--ink); }
+.text-gray-500, .text-gray-600 { color:var(--muted); }
+.text-blue-600, .text-purple-600, .text-indigo-600 { color:var(--brand); }
+.text-green-600 { color:#147363; }
+.text-red-600 { color:#b33e45; }
+.bg-blue-100, .bg-purple-100, .bg-indigo-100 { background:#e8eff7; }
+.bg-green-100 { background:#e4f3ec; }
+.bg-red-100 { background:#fbecee; }
+button, a.rounded-md, a.rounded-lg { border-radius:8px; transition:background-color .15s,box-shadow .15s; }
+button { font:inherit; font-weight:600; cursor:pointer; }
+button[class*="px-"], button[type="submit"] { min-height:42px; }
+button.bg-blue-600, button.bg-purple-600, button.bg-indigo-600 { background:var(--brand); }
+button.bg-blue-600:hover, button.bg-purple-600:hover, button.bg-indigo-600:hover { background:#193d62; }
+button.bg-green-600 { background:#177568; }
+button.bg-green-600:hover { background:#105c52; }
+button.bg-red-600 { background:#b63c47; }
+button.bg-red-600:hover { background:#98313a; }
+button:disabled { cursor:not-allowed; opacity:.5; }
+:where(a,button,input,select,textarea):focus-visible { outline:3px solid #2d8eaf; outline-offset:3px; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea { border-color:#cbd6e2; border-radius:8px; background:#fff; color:var(--ink); min-height:42px; }
+input::placeholder, textarea::placeholder { color:#6a7b8e; }
+input[type="checkbox"], input[type="radio"] { accent-color:var(--brand); }
+table { font-variant-numeric:tabular-nums; }
+thead { background:#f4f7fb; }
+th { font-weight:650; color:#53657a!important; letter-spacing:.035em; }
+td { border-color:#edf1f5; }
+tbody tr:hover { background:#f7f9fc; }
+[id*="Balance"], [id*="Income"], [id*="Expense"], [id$="-amount"] { font-variant-numeric:tabular-nums; letter-spacing:-.035em; }
+.fixed.inset-0 { backdrop-filter:blur(3px); }
+.fixed.inset-0 > .bg-white { max-height:90vh; overflow-y:auto; border-radius:16px; box-shadow:0 20px 70px #142d4933; }
+footer.bg-gray-800 { background:#eaf0f6; color:var(--ink); border-top:1px solid var(--line); padding:2rem 1rem; margin-top:3rem; }
+footer .text-gray-400, footer .text-gray-500 { color:var(--muted); }
+footer .brand-font { font-size:1.25rem; margin-bottom:.4rem; }
+footer .flex { flex-wrap:wrap; gap:.75rem; }
+footer a { font-size:.85rem; margin:0!important; }
+footer hr { border-color:var(--line); }
+body.gradient-bg { background:radial-gradient(ellipse at 15% 15%,#254b6e 0%,#132a43 55%,#102238 100%); }
+.login-card { background:#fff; border:1px solid #ffffff70; box-shadow:0 28px 80px #0003; padding:2.5rem; }
+.login-card h1 { background:none; color:var(--ink); font-size:2rem; }
+.login-card .bg-gradient-to-r { background:var(--brand); }
+.login-card h1.bg-gradient-to-r { background:none; }
+.login-card button[type="submit"]:hover { transform:none; background:#193d62; }
+.skip-link { position:fixed; left:1rem; top:-6rem; z-index:100; background:#fff; color:var(--ink); padding:.75rem 1rem; border:2px solid var(--brand); border-radius:8px; }
+.skip-link:focus { top:1rem; }
+@media (max-width:1100px) { header > .container { flex-wrap:wrap; } header nav { justify-content:flex-start; } }
+@media (max-width:767px) { header.bg-blue-600 { padding:1rem; } main.container { margin-top:1.25rem; } main .p-6 { padding:1.15rem; } .login-card { padding:1.75rem; } main h2 { font-size:1.45rem; } }
+@media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { transition:none!important; animation:none!important; } }
+@media print { header,footer,#mobileMenu,button,.skip-link { display:none!important; } body { background:white; } main.container { max-width:none; } .shadow-md { box-shadow:none; } }
+/* Tailwind's runtime stylesheet may be injected after this file. */
+body .text-blue-600, body .text-purple-600, body .text-indigo-600 { color:var(--brand); }
+body .text-green-600 { color:#147363; }
+body .text-red-600 { color:#b33e45; }
+body .bg-blue-100, body .bg-purple-100, body .bg-indigo-100 { background:#e8eff7; }
+body .bg-green-100 { background:#e4f3ec; }
+body .bg-red-100 { background:#fbecee; }
+@media (max-width:1199px) {
+  header nav { display:none!important; }
+  header #mobileMenuButton { display:inline-flex!important; padding:.6rem; align-items:center; justify-content:center; }
+  #mobileMenu:not(.hidden) { display:block!important; }
+  header > .container { flex-wrap:nowrap; }
+}
+@media (max-width:767px) {
+  .card-shadow > .flex { flex-wrap:wrap; gap:1rem; }
+  .card-shadow.p-8 { padding:1.25rem; }
+  .notification { min-width:0; max-width:calc(100vw - 32px); right:16px; }
+}

@@ -179,8 +179,8 @@ class Dashboard {
                     <div class="flex items-center space-x-3 flex-1 min-w-0">
                         ${typeIcon}
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-gray-900 truncate">${transaction.description}</p>
-                            <p class="text-xs text-gray-500">${transaction.category_name || 'Kategori Yok'}</p>
+                            <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(transaction.description)}</p>
+                            <p class="text-xs text-gray-500">${escapeHtml(transaction.category_name || 'Kategori Yok')}</p>
                         </div>
                     </div>
                     <div class="text-right">
@@ -504,7 +504,7 @@ class Dashboard {
         messageDiv.className = `${bgColor} text-white px-4 py-3 rounded-md shadow-lg mb-2 flex items-center transform transition-transform duration-300 translate-x-full max-w-md`;
         messageDiv.innerHTML = `
             <i class="fas ${icon} mr-2"></i>
-            <span>${message}</span>
+            <span>${escapeHtml(message)}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
             </button>

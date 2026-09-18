@@ -103,7 +103,7 @@ class CategoryManager {
         });
 
         const description = category.description 
-            ? `<span class="text-gray-600">${category.description}</span>`
+            ? `<span class="text-gray-600">${escapeHtml(category.description)}</span>`
             : '<span class="text-gray-400 italic">Açıklama yok</span>';
 
         row.innerHTML = `
@@ -113,7 +113,7 @@ class CategoryManager {
             <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                     ${typeIcon}
-                    <span class="ml-2 text-sm font-medium text-gray-900">${category.name}</span>
+                    <span class="ml-2 text-sm font-medium text-gray-900">${escapeHtml(category.name)}</span>
                 </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
@@ -135,7 +135,7 @@ class CategoryManager {
                         <i class="fas fa-edit"></i>
                     </button>
                     <button 
-                        onclick="categoryManager.showDeleteModal(${category.id}, '${category.name.replace(/'/g, "\\'")}')"
+                        data-delete-category="${category.id}"
                         class="text-red-600 hover:text-red-900 p-2 rounded-md hover:bg-red-50 transition-colors duration-150"
                         title="Sil"
                     >
@@ -145,6 +145,7 @@ class CategoryManager {
             </td>
         `;
 
+        row.querySelector('[data-delete-category]').addEventListener('click', () => this.showDeleteModal(category.id, category.name));
         return row;
     }
 
@@ -385,7 +386,7 @@ class CategoryManager {
         messageDiv.className = `${bgColor} text-white px-4 py-3 rounded-md shadow-lg mb-2 flex items-center transform transition-transform duration-300 translate-x-full`;
         messageDiv.innerHTML = `
             <i class="fas ${icon} mr-2"></i>
-            <span>${message}</span>
+            <span>${escapeHtml(message)}</span>
             <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
                 <i class="fas fa-times"></i>
             </button>

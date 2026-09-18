@@ -12,7 +12,7 @@ BEGIN
       FOR policy_record IN SELECT policyname FROM pg_policies WHERE schemaname = 'public' AND tablename = table_name LOOP
         EXECUTE format('DROP POLICY %I ON public.%I', policy_record.policyname, table_name);
       END LOOP;
-      EXECUTE format('REVOKE ALL ON TABLE public.%I FROM anon, authenticated', table_name);
+      EXECUTE format('REVOKE ALL ON TABLE public.%I FROM PUBLIC, anon, authenticated', table_name);
       EXECUTE format('GRANT ALL ON TABLE public.%I TO service_role', table_name);
     END IF;
   END LOOP;

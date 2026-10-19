@@ -148,10 +148,11 @@ router.post('/', requirePermission('manage_payments'), async (req, res) => {
       .eq('aidat_id', fee_id);
     
     if (paymentsError) throw paymentsError;
-    const paidAmount = prevPayments?.reduce((sum, p) => sum + parseFloat(p.tutar), 0) || 0;
-    const remainingAmount = parseFloat(fee.tutar) - paidAmount;
+    const paidCents = prevPayments?.reduce((sum, p) => sum + Math.round(Number(p.tutar) * 100), 0) || 0;
+    const remainingCents = Math.round(Number(fee.tutar) * 100) - paidCents;
+    const remainingAmount = remainingCents / 100;
 
-    if (parseFloat(amount) > remainingAmount) {
+    if (Math.round(Number(amount) * 100) > remainingCents) {
       return res.status(400).json({
         success: false,
         message: `Ödeme tutarı kalan borcu aşamaz. Kalan borç: ${remainingAmount} TL`
@@ -176,7 +177,7 @@ router.post('/', requirePermission('manage_payments'), async (req, res) => {
     if (error) throw error;
 
     // Database triggers update the fee atomically with the payment.
-    const newPaidAmount = paidAmount + Number(amount);
+    const newPaidAmount = (paidCents + Math.round(Number(amount) * 100)) / 100;
     const newStatus = newPaidAmount >= Number(fee.tutar) ? 'paid' : 'pending';
 
     res.status(201).json({

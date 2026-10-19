@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase } = require('../database');
 const ExcelJS = require('exceljs');
+const { readAll } = require('../lib/read-all');
 const router = express.Router();
 for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
   if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) return res.status(400).json({ message: 'Geçersiz kayıt kimliği' });
@@ -21,44 +22,42 @@ router.get('/financial', requirePermission('view_financial_reports'), async (req
     const { start_date, end_date } = req.query;
 
     // Kategoriler
-    const { data: categories, error: catError } = await supabase
+    const categories = await readAll(() => supabase
       .from('categories')
       .select('*')
-      .order('kategori_adi');
-
-    if (catError) throw catError;
+      .order('kategori_adi').order('id'));
 
     // İşlemler
-    let transactionQuery = supabase
-      .from('transactions')
-      .select(`
-        id, islem_turu, tutar, aciklama, islem_tarihi, olusturma_tarihi,
-        kategori_id,
-        categories!transactions_kategori_id_fkey(kategori_adi, tur)
-      `)
-      .order('islem_tarihi', { ascending: false });
+    const transactionQuery = () => {
+      let query = supabase
+        .from('transactions')
+        .select(`
+          id, islem_turu, tutar, aciklama, islem_tarihi, olusturma_tarihi,
+          kategori_id,
+          categories!transactions_kategori_id_fkey(kategori_adi, tur)
+        `)
+        .order('islem_tarihi', { ascending: false }).order('id');
 
-    if (start_date) {
-      transactionQuery = transactionQuery.gte('islem_tarihi', start_date);
-    }
-    if (end_date) {
-      transactionQuery = transactionQuery.lte('islem_tarihi', end_date);
-    }
+      if (start_date) {
+        query = query.gte('islem_tarihi', start_date);
+      }
+      if (end_date) {
+        query = query.lte('islem_tarihi', end_date);
+      }
 
-    const { data: transactions, error: trxError } = await transactionQuery;
-    if (trxError) throw trxError;
+      return query;
+    };
+    const transactions = await readAll(transactionQuery);
 
     // Aidatlar
-    const { data: fees, error: feeError } = await supabase
+    const fees = await readAll(() => supabase
       .from('student_fees')
       .select(`
         id, aciklama, tutar, son_odeme_tarihi, durum, olusturma_tarihi,
         ogrenci_id,
         students!student_fees_ogrenci_id_fkey(ad, soyad, ogrenci_numarasi, sinif, sube)
       `)
-      .order('olusturma_tarihi', { ascending: false });
-
-    if (feeError) throw feeError;
+      .order('olusturma_tarihi', { ascending: false }).order('id'));
 
     // Excel oluştur
     const workbook = new ExcelJS.Workbook();
@@ -151,14 +150,12 @@ router.get('/financial', requirePermission('view_financial_reports'), async (req
 // Öğrenciler Excel'e aktar (GET /students)
 router.get('/students', requirePermission('view_student_reports'), async (req, res) => {
   try {
-    const { data: students, error } = await supabase
+    const students = await readAll(() => supabase
       .from('students')
       .select('*')
       .order('sinif')
       .order('sube')
-      .order('ad');
-
-    if (error) throw error;
+      .order('ad').order('id'));
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'SAVI Budget System';
@@ -210,16 +207,14 @@ router.get('/students', requirePermission('view_student_reports'), async (req, r
 // Aidatlar Excel'e aktar (GET /fees)
 router.get('/fees', requirePermission('view_financial_reports'), async (req, res) => {
   try {
-    const { data: fees, error } = await supabase
+    const fees = await readAll(() => supabase
       .from('student_fees')
       .select(`
         id, aciklama, tutar, son_odeme_tarihi, durum, olusturma_tarihi,
         ogrenci_id,
         students!student_fees_ogrenci_id_fkey(ad, soyad, ogrenci_numarasi, sinif, sube)
       `)
-      .order('son_odeme_tarihi', { ascending: false });
-
-    if (error) throw error;
+      .order('son_odeme_tarihi', { ascending: false }).order('id'));
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'SAVI Budget System';

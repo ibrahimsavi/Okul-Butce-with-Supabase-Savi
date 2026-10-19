@@ -4,7 +4,9 @@ const bcrypt = require('bcryptjs');
 const { supabase } = require('../database');
 const { redirectIfAuthenticated, requireAuth } = require('../middleware/auth');
 const { loginLimiter, validPassword, validateInput } = require('../middleware/security');
-router.use(validateInput);
+// Logout has no payload; other authentication operations require a valid body.
+router.use((req, res, next) => req.method === 'POST' && req.path === '/logout'
+    ? next() : validateInput(req, res, next));
 
 // Login endpoint
 router.post('/login', loginLimiter, redirectIfAuthenticated, async (req, res) => {

@@ -1,4 +1,5 @@
 const express = require('express');
+const { readAll } = require('../lib/read-all');
 const { supabase } = require('../database');
 const router = express.Router();
 for (const name of ['id', 'roleId', 'permissionId']) router.param(name, (req, res, next, value) => {
@@ -209,21 +210,22 @@ router.get('/stats/summary', requirePermission('view_transactions'), async (req,
   try {
     const { start_date, end_date } = req.query;
 
-    let query = supabase
-      .from('transactions')
-      .select('islem_turu, tutar');
+    const createQuery = () => {
+      let query = supabase
+        .from('transactions')
+        .select('id, islem_turu, tutar').order('id');
 
-    if (start_date && end_date) {
-      query = query.gte('islem_tarihi', start_date).lte('islem_tarihi', end_date);
-    } else if (start_date) {
-      query = query.gte('islem_tarihi', start_date);
-    } else if (end_date) {
-      query = query.lte('islem_tarihi', end_date);
-    }
+      if (start_date && end_date) {
+        query = query.gte('islem_tarihi', start_date).lte('islem_tarihi', end_date);
+      } else if (start_date) {
+        query = query.gte('islem_tarihi', start_date);
+      } else if (end_date) {
+        query = query.lte('islem_tarihi', end_date);
+      }
 
-    const { data, error } = await query;
-
-    if (error) throw error;
+      return query;
+    };
+    const data = await readAll(createQuery);
 
     // Manuel hesaplama
     const totals = {

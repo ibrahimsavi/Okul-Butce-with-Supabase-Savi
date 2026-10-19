@@ -397,6 +397,7 @@ router.delete('/:id', requirePermission('delete_fee'), async (req, res) => {
       .delete()
       .eq('id', id);
 
+    if (error?.code === '23503') return res.status(409).json({ success: false, message: 'İlişkili mali kayıtlar bulunduğu için silinemedi. Listeyi yenileyin.' });
     if (error) throw error;
 
     res.json({

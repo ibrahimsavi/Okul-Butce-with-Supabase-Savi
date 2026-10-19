@@ -38,3 +38,10 @@ test('inactive users and changed credentials invalidate existing sessions',async
 test('CSRF guard rejects cross-origin login and logout before handlers',async()=>{
   for(const endpoint of ['login','logout'])assert.equal((await fetch(base+'/api/auth/'+endpoint,{method:'POST',headers:{Origin:'https://attacker.test','Content-Type':'application/json'},body:'{}'})).status,403);
 });
+test('same-origin bodyless logout destroys the session', async()=>{
+  const sessionCookie=await login();
+  const result=await fetch(base+'/api/auth/logout',{method:'POST',headers:{Cookie:sessionCookie,Origin:base}});
+  assert.equal(result.status,200);
+  assert.equal((await result.json()).success,true);
+  assert.equal((await fetch(base+'/api/auth/session',{headers:{Cookie:sessionCookie}})).status,401);
+});

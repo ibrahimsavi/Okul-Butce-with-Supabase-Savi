@@ -246,3 +246,7 @@ Uygulama çerçeveleme, nesne kaynağı ve temel adres kullanımı için güvenl
 ### Port kullanımda hatası alınıyor
 
 `.env` içindeki `PORT` değerini boşta olan başka bir portla değiştirin ve `APP_ORIGIN` adresini aynı porta göre güncelleyin.
+
+### Mevcut kurulumlar için mali kayıt koruması
+
+Bu sürüme geçerken Supabase SQL Editor üzerinden `supabase/protect_financial_deletions.sql` dosyasını çalıştırın. Veri silmez; öğrenci → aidat ve aidat → ödeme ilişkilerinde zincirleme silmeyi engeller. Böylece eşzamanlı kayıt ekleme/silme sırasında ödeme ve aidatlar kaybolmaz. Yeni kurulum şemaları aynı korumayı içerir.

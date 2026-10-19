@@ -6,6 +6,8 @@ test('SQL migrations close anonymous access and enforce payment balances', async
  await db.exec(fs.readFileSync('supabase/full_setup.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/harden_access.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/harden_payments.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/protect_financial_deletions.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/protect_financial_deletions.sql','utf8'));
  const r=await db.query("SELECT relname,relrowsecurity FROM pg_class WHERE relname IN ('users','roles','students','payments','student_fees')");assert.ok(r.rows.every(r=>r.relrowsecurity));
  await db.exec('GRANT SELECT ON public.students TO PUBLIC');
  await db.exec(fs.readFileSync('supabase/harden_access.sql','utf8'));
@@ -23,5 +25,8 @@ test('SQL migrations close anonymous access and enforce payment balances', async
  await db.exec("INSERT INTO payments (aidat_id,tutar,odeme_tarihi,odeme_yontemi) VALUES (999,40,CURRENT_DATE,'cash')");assert.equal((await db.query('SELECT durum FROM student_fees WHERE id=999')).rows[0].durum,'paid');
  await db.exec('DELETE FROM payments WHERE aidat_id=999 AND tutar=40');assert.equal((await db.query('SELECT durum FROM student_fees WHERE id=999')).rows[0].durum,'pending');
  await assert.rejects(()=>db.exec("INSERT INTO payments (aidat_id,tutar,odeme_tarihi,odeme_yontemi) VALUES (999,-5,CURRENT_DATE,'cash')"),/Invalid/);
+ await assert.rejects(()=>db.exec('DELETE FROM student_fees WHERE id=999'), /foreign key/);
+ await assert.rejects(()=>db.exec('DELETE FROM students WHERE id=1'), /foreign key/);
+ assert.equal((await db.query('SELECT tutar FROM payments WHERE aidat_id=999')).rows[0].tutar, '60.00');
  console.log('PASS: schema, idempotent migrations, anonymous access denied, overpayment, fee reduction, payment status and deletion rollback checks');await db.close();
 });

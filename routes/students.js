@@ -468,11 +468,12 @@ router.delete('/:id', requirePermission('delete_student'), async (req, res) => {
     }
 
     // İlişkili kayıtları kontrol et
-    const { count: feeCount } = await supabase
+    const { count: feeCount, error: feeError } = await supabase
       .from('student_fees')
       .select('*', { count: 'exact', head: true })
       .eq('ogrenci_id', id);
 
+    if (feeError) throw feeError;
     if (feeCount > 0) {
       return res.status(400).json({
         success: false,
@@ -486,6 +487,7 @@ router.delete('/:id', requirePermission('delete_student'), async (req, res) => {
       .delete()
       .eq('id', id);
 
+    if (error?.code === '23503') return res.status(409).json({ success: false, message: 'İlişkili mali kayıtlar bulunduğu için silinemedi. Listeyi yenileyin.' });
     if (error) throw error;
 
     res.json({

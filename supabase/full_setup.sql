@@ -54,7 +54,7 @@ CREATE TABLE transactions (
 
 CREATE TABLE student_fees (
     id BIGSERIAL PRIMARY KEY,
-    ogrenci_id BIGINT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    ogrenci_id BIGINT NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
     aciklama TEXT NOT NULL,
     tutar NUMERIC(12, 2) NOT NULL,
     son_odeme_tarihi DATE NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE student_fees (
 
 CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
-    aidat_id BIGINT NOT NULL REFERENCES student_fees(id) ON DELETE CASCADE,
+    aidat_id BIGINT NOT NULL REFERENCES student_fees(id) ON DELETE RESTRICT,
     tutar NUMERIC(12, 2) NOT NULL,
     odeme_tarihi DATE NOT NULL,
     odeme_yontemi VARCHAR(20) NOT NULL CHECK (odeme_yontemi IN ('cash', 'bank_transfer', 'credit_card', 'check')),
